@@ -8,7 +8,7 @@ export const COLORS = {
   textSecondary: "#7878a0",
   border: "#22222e",
   accent: "#e10600",
-  categorical: ["#A1C9F4", "#FFB482", "#8DE5A1", "#FF9F9B", "#D0BBFF"],
+  categorical: ["#4db8ff", "#00d68f", "#ffb347", "#ff6b6b", "#c084fc"],
   correct: "#00d68f",
   incorrect: "#ffd400",
 } as const;
