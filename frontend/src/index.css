@@ -43,25 +43,50 @@ a {
 }
 
 .nav-link {
+  position: relative;
   display: inline-block;
   padding: 8px 14px;
   font-size: 0.9rem;
   color: var(--text-secondary);
   text-decoration: none;
   border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  border-radius: 6px 6px 0 0;
 }
 
 .nav-link:hover {
   color: var(--text);
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .nav-link.active {
   color: var(--text);
-  border-bottom-color: var(--correct);
+}
+
+.nav-underline {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--correct);
+  border-radius: 2px;
 }
 
 .h2h-pair {
   margin-bottom: 20px;
+  padding: 8px;
+  margin: -8px -8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.h2h-pair:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.h2h-pair:hover .h2h-bar-track {
+  box-shadow: 0 0 0 1px var(--text-secondary);
 }
 
 .h2h-constructor {
@@ -85,10 +110,16 @@ a {
   border-radius: 4px;
   overflow: hidden;
   background: var(--border);
+  transition: box-shadow 0.15s ease;
 }
 
 .h2h-bar-fill {
   height: 100%;
+  transition: filter 0.15s ease;
+}
+
+.h2h-bar-track:hover .h2h-bar-fill {
+  filter: brightness(1.15);
 }
 
 .header {
@@ -168,6 +199,11 @@ a {
   padding: 16px;
   margin-bottom: 20px;
   overflow-x: auto;
+  transition: border-color 0.2s ease;
+}
+
+.panel:hover {
+  border-color: #4a4a52;
 }
 
 .panel h2 {
@@ -206,14 +242,20 @@ th {
   font-weight: 600;
   cursor: pointer;
   user-select: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 th:hover {
   color: var(--text);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+tbody tr {
+  transition: background-color 0.15s ease;
 }
 
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .grade-badge {
@@ -225,6 +267,12 @@ tbody tr:hover {
   border-radius: 6px;
   font-weight: 700;
   color: #17171a;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.grade-badge:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .misclassified-list {
@@ -319,6 +367,13 @@ tbody tr:hover {
   border-radius: 6px;
   padding: 10px 12px;
   text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--text-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .stat-tile .stat-value {

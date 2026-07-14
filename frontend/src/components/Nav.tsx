@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
 
 const LINKS = [
@@ -18,7 +19,18 @@ export default function Nav() {
           end={link.end}
           className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
         >
-          {link.label}
+          {({ isActive }) => (
+            <>
+              {link.label}
+              {isActive && (
+                <motion.div
+                  className="nav-underline"
+                  layoutId="nav-underline"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                />
+              )}
+            </>
+          )}
         </NavLink>
       ))}
     </nav>
