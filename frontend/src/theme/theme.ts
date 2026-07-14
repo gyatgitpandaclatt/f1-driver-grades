@@ -1,21 +1,24 @@
 // Recharts needs literal color strings (not CSS vars) for fill/stroke props.
 // Keep these in sync with the CSS custom properties in src/index.css.
 export const COLORS = {
-  background: "#1D1D20",
-  surface: "#26262B",
-  text: "#fbfbff",
-  textSecondary: "#909094",
+  background: "#0a0a0c",
+  surface: "#111116",
+  surface2: "#18181f",
+  text: "#f0f0f5",
+  textSecondary: "#7878a0",
+  border: "#22222e",
+  accent: "#e10600",
   categorical: ["#A1C9F4", "#FFB482", "#8DE5A1", "#FF9F9B", "#D0BBFF"],
-  correct: "#17b26a",
+  correct: "#00d68f",
   incorrect: "#ffd400",
 } as const;
 
 export const GRADE_COLORS: Record<string, string> = {
-  S: "#8DE5A1",
-  A: "#A1C9F4",
-  B: "#FFB482",
-  C: "#FF9F9B",
-  D: "#D0BBFF",
+  S: "#00d68f",   // bright green — elite
+  A: "#4db8ff",   // bright blue — strong
+  B: "#ffb347",   // amber — solid
+  C: "#ff6b6b",   // red-pink — below par
+  D: "#c084fc",   // purple — poor
 };
 
 export const GRADE_ORDER: Record<string, number> = {

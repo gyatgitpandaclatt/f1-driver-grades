@@ -19,13 +19,16 @@ export default function Header({
 }: Props) {
   return (
     <div className="header">
-      <div>
-        <h1>F1 {season ?? ""} Driver Grades</h1>
-        <div className="subtitle">
-          {currentRound != null && <>Through round {currentRound} · </>}
-          {lastUpdated
-            ? `Last updated ${new Date(lastUpdated).toLocaleString()}`
-            : "Loading…"}
+      <div className="header-left">
+        <div className="header-logo">F1</div>
+        <div>
+          <h1>Driver Grades {season ?? ""}</h1>
+          <div className="subtitle">
+            {currentRound != null && <>Round {currentRound} · </>}
+            {lastUpdated
+              ? `Updated ${new Date(lastUpdated).toLocaleString()}`
+              : "Loading data…"}
+          </div>
         </div>
       </div>
       <RefreshButton onRefresh={onRefresh} refreshing={refreshing} error={refreshError} />
