@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import type { DriverGrade } from "../api/types";
 import { GRADE_ORDER } from "../theme/theme";
@@ -65,7 +66,11 @@ export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
         </thead>
         <tbody>
           {sorted.map((d) => (
-            <tr key={d.driver_code}>
+            <motion.tr
+              key={d.driver_code}
+              layout
+              transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            >
               <td>{d.position}</td>
               <td>{d.driver_name}</td>
               <td>{d.constructor}</td>
@@ -75,7 +80,7 @@ export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
                 <GradeBadge grade={d.grade} />
               </td>
               <td>{d.season_label}</td>
-            </tr>
+            </motion.tr>
           ))}
         </tbody>
       </table>

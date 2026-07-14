@@ -68,6 +68,7 @@ a {
 }
 
 .nav-link {
+  position: relative;
   display: inline-block;
   padding: 10px 16px;
   font-size: 0.82rem;
@@ -78,21 +79,44 @@ a {
   text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  border-radius: 6px 6px 0 0;
 }
 
 .nav-link:hover {
   color: var(--text);
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .nav-link.active {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+}
+
+.nav-underline {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--glow);
 }
 
 /* ── H2H ── */
 .h2h-pair {
-  margin-bottom: 24px;
+  padding: 10px;
+  margin: -10px -10px 14px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.h2h-pair:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.h2h-pair:hover .h2h-bar-track {
+  box-shadow: 0 0 0 1px var(--border-bright);
 }
 
 .h2h-constructor {
@@ -118,11 +142,16 @@ a {
   border-radius: 3px;
   overflow: hidden;
   background: var(--border);
+  transition: box-shadow 0.15s ease;
 }
 
 .h2h-bar-fill {
   height: 100%;
-  transition: width 0.4s ease;
+  transition: width 0.4s ease, filter 0.15s ease;
+}
+
+.h2h-bar-track:hover .h2h-bar-fill {
+  filter: brightness(1.15);
 }
 
 /* ── HEADER ── */
@@ -255,7 +284,7 @@ a {
   padding: 20px;
   margin-bottom: 20px;
   overflow-x: auto;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s ease;
 }
 
 .panel:hover {
@@ -308,14 +337,16 @@ th {
   cursor: pointer;
   user-select: none;
   background: var(--surface-2);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 th:hover {
   color: var(--text);
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 tbody tr {
-  transition: background 0.1s;
+  transition: background-color 0.15s ease;
 }
 
 tbody tr:hover {
@@ -344,6 +375,12 @@ tbody tr:nth-child(even):hover {
   letter-spacing: 0.02em;
   color: #0a0a0c;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.grade-badge:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 /* ── MISC ── */
@@ -456,10 +493,11 @@ tbody tr:nth-child(even):hover {
   border-radius: 10px;
   padding: 14px 16px;
   text-align: center;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-tile:hover {
+  transform: translateY(-3px);
   border-color: var(--border-bright);
   box-shadow: 0 0 16px rgba(225, 6, 0, 0.08);
 }

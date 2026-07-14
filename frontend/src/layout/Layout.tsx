@@ -1,4 +1,5 @@
-import { Outlet } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { Outlet, useLocation } from "react-router-dom";
 import Header from "../components/Header";
 import Nav from "../components/Nav";
 import StatusBanner from "../components/StatusBanner";
@@ -19,6 +20,8 @@ export default function Layout() {
     refreshError,
   } = useDriverGrades();
 
+  const location = useLocation();
+
   const context: LayoutContext | null =
     meta && season != null && currentRound != null
       ? { drivers, meta, season, currentRound }
@@ -38,7 +41,19 @@ export default function Layout() {
 
       {status !== "ok" && <StatusBanner status={status} message={message} onRetry={refresh} />}
 
-      {status === "ok" && context && <Outlet context={context} />}
+      {status === "ok" && context && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <Outlet context={context} />
+          </motion.div>
+        </AnimatePresence>
+      )}
     </>
   );
 }
