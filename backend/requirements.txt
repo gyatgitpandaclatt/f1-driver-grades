@@ -1,0 +1,8 @@
+requests
+truststore
+pandas
+numpy
+scikit-learn
+fastapi
+uvicorn[standard]
+pydantic
