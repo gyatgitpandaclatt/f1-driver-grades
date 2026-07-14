@@ -1,8 +1,9 @@
 run = "bash start.sh"
 entrypoint = "start.sh"
+modules = ["nodejs-20", "python-3.12", "web", "bash"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
 
 [[ports]]
 localPort = 8000
