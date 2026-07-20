@@ -119,7 +119,7 @@ def compute_composite_scores(
 
     df["tier_bonus"] = df["car_tier"].map(TIER_BONUS).fillna(DEFAULT_TIER_BONUS)
 
-    label_bonus = {"overperformer": 5, "expected": 0, "underperformer": -5}
+    label_bonus = {"overperformer": 4, "expected": 0, "underperformer": -4}
     df["label_bonus"] = df["season_label"].map(label_bonus).fillna(0)
 
     df["model_bonus"] = df.apply(
@@ -129,10 +129,10 @@ def compute_composite_scores(
     df["rookie_bonus"] = df["is_rookie"] * 2
 
     df["composite"] = (
-        df["pts_score"] * 0.23 +
-        df["pos_score"] * 0.15 +
-        df["perf_score"] * 0.16 +
-        df["grid_score"] * 0.16 +
+        df["pts_score"] * 0.25 +
+        df["pos_score"] * 0.20 +
+        df["perf_score"] * 0.13 +
+        df["grid_score"] * 0.12 +
         df["teammate_score"] * 0.08 +
         df["qual_score"] * 0.08 +
         df["label_bonus"] * 1.00 +

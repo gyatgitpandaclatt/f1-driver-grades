@@ -54,21 +54,21 @@ export default function MethodologyPage() {
       </p>
       <ul>
         <li>
-          <strong>Championship Points Score (23% weight)</strong> — normalized by the
+          <strong>Championship Points Score (25% weight)</strong> — normalized by the
           maximum points total in the field; rewards consistency and race wins.
         </li>
         <li>
-          <strong>Championship Position Score (15% weight)</strong> — championship position
+          <strong>Championship Position Score (20% weight)</strong> — championship position
           from P1 (100 pts) down to the last classified position (0 pts); reflects title
           contention.
         </li>
         <li>
-          <strong>Performance Consistency Score (16% weight)</strong> — overperformance
+          <strong>Performance Consistency Score (13% weight)</strong> — overperformance
           share minus underperformance share, scaled and offset; captures race-to-race
           execution vs. expectations.
         </li>
         <li>
-          <strong>Grid-to-Finish Improvement Score (16% weight)</strong> — negative average
+          <strong>Grid-to-Finish Improvement Score (12% weight)</strong> — negative average
           finish-minus-grid (better finishes than grid) scaled; drivers who gain positions
           earn higher scores.
         </li>
@@ -87,7 +87,7 @@ export default function MethodologyPage() {
           </ul>
         </li>
         <li>
-          <strong>Season Label Bonus</strong> (flat +5 for overperformer, 0 for expected, −5
+          <strong>Season Label Bonus</strong> (flat +4 for overperformer, 0 for expected, −4
           for underperformer) — rewards or penalizes the macro-level consistency
           classification.
         </li>
@@ -97,8 +97,8 @@ export default function MethodologyPage() {
           signal from the trained classifier.
         </li>
         <li>
-          <strong>Car Strength Tier Bonus</strong> (flat, 0–10) — rewards drivers in weaker
-          cars (Mercedes = 0, Cadillac/Aston Martin = +10) to offset the advantage of
+          <strong>Car Strength Tier Bonus</strong> (flat, 0–6) — rewards drivers in weaker
+          cars (Mercedes = 0, Cadillac/Aston Martin = +6) to offset the advantage of
           driving a faster car.
         </li>
         <li>
