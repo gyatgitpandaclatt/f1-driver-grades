@@ -130,9 +130,9 @@ def compute_composite_scores(
 
     df["composite"] = (
         df["pts_score"] * 0.23 +
-        df["pos_score"] * 0.23 +
-        df["perf_score"] * 0.12 +
-        df["grid_score"] * 0.12 +
+        df["pos_score"] * 0.15 +
+        df["perf_score"] * 0.16 +
+        df["grid_score"] * 0.16 +
         df["teammate_score"] * 0.08 +
         df["qual_score"] * 0.08 +
         df["label_bonus"] * 1.00 +
