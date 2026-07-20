@@ -58,17 +58,17 @@ export default function MethodologyPage() {
           maximum points total in the field; rewards consistency and race wins.
         </li>
         <li>
-          <strong>Championship Position Score (23% weight)</strong> — championship position
+          <strong>Championship Position Score (15% weight)</strong> — championship position
           from P1 (100 pts) down to the last classified position (0 pts); reflects title
           contention.
         </li>
         <li>
-          <strong>Performance Consistency Score (12% weight)</strong> — overperformance
+          <strong>Performance Consistency Score (16% weight)</strong> — overperformance
           share minus underperformance share, scaled and offset; captures race-to-race
           execution vs. expectations.
         </li>
         <li>
-          <strong>Grid-to-Finish Improvement Score (12% weight)</strong> — negative average
+          <strong>Grid-to-Finish Improvement Score (16% weight)</strong> — negative average
           finish-minus-grid (better finishes than grid) scaled; drivers who gain positions
           earn higher scores.
         </li>
