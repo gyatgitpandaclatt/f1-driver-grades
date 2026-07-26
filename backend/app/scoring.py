@@ -129,12 +129,12 @@ def compute_composite_scores(
     df["rookie_bonus"] = df["is_rookie"] * 2
 
     df["composite"] = (
-        df["pts_score"] * 0.25 +
-        df["pos_score"] * 0.22 +
+        df["pts_score"] * 0.22 +
+        df["pos_score"] * 0.19 +
         df["perf_score"] * 0.175 +
         df["grid_score"] * 0.175 +
-        df["teammate_score"] * 0.09 +
-        df["qual_score"] * 0.09 +
+        df["teammate_score"] * 0.15 +
+        df["qual_score"] * 0.15 +
         df["label_bonus"] * 1.00 +
         df["model_bonus"] * 1.00 +
         df["tier_bonus"] * 1.00 +

@@ -54,11 +54,11 @@ export default function MethodologyPage() {
       </p>
       <ul>
         <li>
-          <strong>Championship Points Score (25% weight)</strong> — normalized by the
+          <strong>Championship Points Score (22% weight)</strong> — normalized by the
           maximum points total in the field; rewards consistency and race wins.
         </li>
         <li>
-          <strong>Championship Position Score (22% weight)</strong> — championship position
+          <strong>Championship Position Score (19% weight)</strong> — championship position
           from P1 (100 pts) down to the last classified position (0 pts); reflects title
           contention.
         </li>
@@ -73,12 +73,12 @@ export default function MethodologyPage() {
           earn higher scores.
         </li>
         <li>
-          <strong>Teammate Points Ratio Score (9% weight)</strong> — points relative to the
+          <strong>Teammate Points Ratio Score (15% weight)</strong> — points relative to the
           highest-scoring teammate on the same constructor; isolates driver value from car
           performance.
         </li>
         <li>
-          <strong>Qualifying Score (9% weight)</strong> — a composite of three
+          <strong>Qualifying Score (15% weight)</strong> — a composite of three
           sub-components:
           <ul>
             <li>Average qualifying position vs. field (60% sub-weight): best avg = 100, worst avg = 0</li>
