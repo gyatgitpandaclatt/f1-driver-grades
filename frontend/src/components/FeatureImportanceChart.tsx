@@ -12,7 +12,6 @@ import type { FeatureImportance } from "../api/types";
 import { COLORS } from "../theme/theme";
 
 const FEATURE_LABELS: Record<string, string> = {
-  races: "Races entered",
   avg_finish_minus_grid: "Avg finish vs grid",
   overperf_share: "Overperformance share",
   underperf_share: "Underperformance share",
@@ -37,10 +36,12 @@ export default function FeatureImportanceChart({
     );
   }
 
-  const chartData = data.map((d) => ({
-    feature: FEATURE_LABELS[d.feature] ?? d.feature,
-    importance: d.importance,
-  }));
+  const chartData = data
+    .filter((d) => d.feature !== "races")
+    .map((d) => ({
+      feature: FEATURE_LABELS[d.feature] ?? d.feature,
+      importance: d.importance,
+    }));
 
   return (
     <div className="panel">
