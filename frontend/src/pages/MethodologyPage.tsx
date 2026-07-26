@@ -109,11 +109,11 @@ export default function MethodologyPage() {
 
       <h3>Grade Boundaries</h3>
       <ul>
-        <li><strong>S Grade:</strong> ≥80 points (elite)</li>
-        <li><strong>A Grade:</strong> 65–79 points (top tier)</li>
-        <li><strong>B Grade:</strong> 50–64 points (competitive)</li>
-        <li><strong>C Grade:</strong> 35–49 points (mid-field)</li>
-        <li><strong>D Grade:</strong> &lt;35 points (struggling)</li>
+        <li><strong>S Grade:</strong> ≥88 points (elite)</li>
+        <li><strong>A Grade:</strong> 71–87 points (top tier)</li>
+        <li><strong>B Grade:</strong> 55–70 points (competitive)</li>
+        <li><strong>C Grade:</strong> 38–54 points (mid-field)</li>
+        <li><strong>D Grade:</strong> &lt;38 points (struggling)</li>
       </ul>
       <div className="stat-grid">
         {Object.keys(GRADE_ORDER)

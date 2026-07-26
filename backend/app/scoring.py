@@ -40,13 +40,13 @@ def compute_qual_stats(merged_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def assign_grade(score: float) -> str:
-    if score >= 80:
+    if score >= 88:
         return "S"
-    elif score >= 65:
+    elif score >= 71:
         return "A"
-    elif score >= 50:
+    elif score >= 55:
         return "B"
-    elif score >= 35:
+    elif score >= 38:
         return "C"
     else:
         return "D"
