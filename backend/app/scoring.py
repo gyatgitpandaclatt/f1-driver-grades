@@ -40,13 +40,13 @@ def compute_qual_stats(merged_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def assign_grade(score: float) -> str:
-    if score >= 80:
+    if score >= 88:
         return "S"
-    elif score >= 65:
+    elif score >= 71:
         return "A"
-    elif score >= 50:
+    elif score >= 55:
         return "B"
-    elif score >= 35:
+    elif score >= 38:
         return "C"
     else:
         return "D"
@@ -130,11 +130,11 @@ def compute_composite_scores(
 
     df["composite"] = (
         df["pts_score"] * 0.25 +
-        df["pos_score"] * 0.20 +
-        df["perf_score"] * 0.13 +
-        df["grid_score"] * 0.12 +
-        df["teammate_score"] * 0.08 +
-        df["qual_score"] * 0.08 +
+        df["pos_score"] * 0.22 +
+        df["perf_score"] * 0.175 +
+        df["grid_score"] * 0.175 +
+        df["teammate_score"] * 0.09 +
+        df["qual_score"] * 0.09 +
         df["label_bonus"] * 1.00 +
         df["model_bonus"] * 1.00 +
         df["tier_bonus"] * 1.00 +

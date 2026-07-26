@@ -58,27 +58,27 @@ export default function MethodologyPage() {
           maximum points total in the field; rewards consistency and race wins.
         </li>
         <li>
-          <strong>Championship Position Score (20% weight)</strong> — championship position
+          <strong>Championship Position Score (22% weight)</strong> — championship position
           from P1 (100 pts) down to the last classified position (0 pts); reflects title
           contention.
         </li>
         <li>
-          <strong>Performance Consistency Score (13% weight)</strong> — overperformance
+          <strong>Performance Consistency Score (17.5% weight)</strong> — overperformance
           share minus underperformance share, scaled and offset; captures race-to-race
           execution vs. expectations.
         </li>
         <li>
-          <strong>Grid-to-Finish Improvement Score (12% weight)</strong> — negative average
+          <strong>Grid-to-Finish Improvement Score (17.5% weight)</strong> — negative average
           finish-minus-grid (better finishes than grid) scaled; drivers who gain positions
           earn higher scores.
         </li>
         <li>
-          <strong>Teammate Points Ratio Score (8% weight)</strong> — points relative to the
+          <strong>Teammate Points Ratio Score (9% weight)</strong> — points relative to the
           highest-scoring teammate on the same constructor; isolates driver value from car
           performance.
         </li>
         <li>
-          <strong>Qualifying Score (8% weight)</strong> — a composite of three
+          <strong>Qualifying Score (9% weight)</strong> — a composite of three
           sub-components:
           <ul>
             <li>Average qualifying position vs. field (60% sub-weight): best avg = 100, worst avg = 0</li>
@@ -109,11 +109,11 @@ export default function MethodologyPage() {
 
       <h3>Grade Boundaries</h3>
       <ul>
-        <li><strong>S Grade:</strong> ≥80 points (elite)</li>
-        <li><strong>A Grade:</strong> 65–79 points (top tier)</li>
-        <li><strong>B Grade:</strong> 50–64 points (competitive)</li>
-        <li><strong>C Grade:</strong> 35–49 points (mid-field)</li>
-        <li><strong>D Grade:</strong> &lt;35 points (struggling)</li>
+        <li><strong>S Grade:</strong> ≥88 points (elite)</li>
+        <li><strong>A Grade:</strong> 71–87 points (top tier)</li>
+        <li><strong>B Grade:</strong> 55–70 points (competitive)</li>
+        <li><strong>C Grade:</strong> 38–54 points (mid-field)</li>
+        <li><strong>D Grade:</strong> &lt;38 points (struggling)</li>
       </ul>
       <div className="stat-grid">
         {Object.keys(GRADE_ORDER)
