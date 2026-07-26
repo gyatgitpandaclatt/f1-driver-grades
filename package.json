@@ -1,0 +1,15 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "Computes S/A/B/C/D letter grades for 2026 F1 drivers from live qualifying/race results and standings, and displays them in a web UI with feature-importance and predicted-vs-actual charts.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "framer-motion": "^12.42.2"
+  }
+}

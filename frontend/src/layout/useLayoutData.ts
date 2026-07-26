@@ -1,4 +1,4 @@
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router";
 import type { DriverGrade, Meta } from "../api/types";
 
 export interface LayoutContext {

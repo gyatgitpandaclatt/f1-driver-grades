@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router";
 import Layout from "./layout/Layout";
 import DriverGradesPage from "./pages/DriverGradesPage";
 import QualifyingH2HPage from "./pages/QualifyingH2HPage";

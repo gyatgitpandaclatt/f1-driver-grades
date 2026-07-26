@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 import Header from "../components/Header";
 import Nav from "../components/Nav";
 import StatusBanner from "../components/StatusBanner";
