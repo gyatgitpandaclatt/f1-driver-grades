@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { FeatureImportance } from "../api/types";
+import type { FeatureImportance, RfMetrics } from "../api/types";
 import { COLORS } from "../theme/theme";
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -18,12 +18,18 @@ const FEATURE_LABELS: Record<string, string> = {
   is_rookie: "Rookie",
 };
 
+function pct(value: number): string {
+  return `${(value * 100).toFixed(0)}%`;
+}
+
 export default function FeatureImportanceChart({
   data,
   note,
+  rfMetrics,
 }: {
   data: FeatureImportance[] | null;
   note: string | null;
+  rfMetrics: RfMetrics | null;
 }) {
   if (!data) {
     return (
@@ -68,6 +74,38 @@ export default function FeatureImportanceChart({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+
+      {rfMetrics && (
+        <>
+          <p className="model-note">RF performance (leave-one-out CV):</p>
+          <div className="stat-grid">
+            <div className="stat-tile">
+              <div className="stat-value">{pct(rfMetrics.accuracy)}</div>
+              <div className="stat-label">Accuracy</div>
+            </div>
+            <div className="stat-tile">
+              <div className="stat-value">{pct(rfMetrics.macro_precision)}</div>
+              <div className="stat-label">Macro precision</div>
+            </div>
+            <div className="stat-tile">
+              <div className="stat-value">{pct(rfMetrics.macro_recall)}</div>
+              <div className="stat-label">Macro recall</div>
+            </div>
+            <div className="stat-tile">
+              <div className="stat-value">{pct(rfMetrics.macro_f1)}</div>
+              <div className="stat-label">Macro F1</div>
+            </div>
+          </div>
+          <ul className="misclassified-list">
+            {rfMetrics.per_class.map((c) => (
+              <li key={c.label}>
+                <strong>{c.label}</strong> — precision {pct(c.precision)}, recall{" "}
+                {pct(c.recall)}, F1 {pct(c.f1)} (n={c.support})
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

@@ -57,11 +57,28 @@ class MisclassifiedEntry(BaseModel):
     predicted_label: str
 
 
+class RfClassMetrics(BaseModel):
+    label: str
+    precision: float
+    recall: float
+    f1: float
+    support: int
+
+
+class RfMetrics(BaseModel):
+    accuracy: float
+    macro_precision: float
+    macro_recall: float
+    macro_f1: float
+    per_class: List[RfClassMetrics]
+
+
 class Meta(BaseModel):
     feature_importances: Optional[List[FeatureImportance]]
     predicted_vs_actual: List[PredictedVsActualPoint]
     misclassified: List[MisclassifiedEntry]
     model_note: Optional[str]
+    rf_metrics: Optional[RfMetrics]
     performance_label_distribution: dict[str, int]
     total_race_entries: int
 

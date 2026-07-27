@@ -63,7 +63,7 @@ def run_pipeline(season: int = SEASON) -> dict:
     driver_season_df = build_driver_season_table(model_df)
     season_labeled_df = assign_season_label(driver_season_df)
 
-    season_labeled_df, feature_importances, model_note = run_model(season_labeled_df)
+    season_labeled_df, feature_importances, model_note, rf_metrics = run_model(season_labeled_df)
 
     standings_df = fetch_driver_standings(season)
     qual_stats_df = compute_qual_stats(merged_df)
@@ -116,6 +116,7 @@ def run_pipeline(season: int = SEASON) -> dict:
             "predicted_vs_actual": predicted_vs_actual,
             "misclassified": misclassified,
             "model_note": model_note,
+            "rf_metrics": rf_metrics,
             "performance_label_distribution": performance_label_distribution,
             "total_race_entries": int(len(model_df)),
         },

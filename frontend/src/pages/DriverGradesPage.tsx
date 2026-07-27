@@ -12,7 +12,11 @@ export default function DriverGradesPage() {
       <DriverTable drivers={drivers} />
       {meta.model_note && <p className="model-note">{meta.model_note}</p>}
       <div className="charts-row">
-        <FeatureImportanceChart data={meta.feature_importances} note={meta.model_note} />
+        <FeatureImportanceChart
+          data={meta.feature_importances}
+          note={meta.model_note}
+          rfMetrics={meta.rf_metrics}
+        />
         <PredictedVsActualChart data={meta.predicted_vs_actual} />
       </div>
       <MisclassifiedCallout entries={meta.misclassified} />
