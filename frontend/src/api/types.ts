@@ -54,11 +54,28 @@ export interface MisclassifiedEntry {
   predicted_label: string;
 }
 
+export interface RfClassMetrics {
+  label: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  support: number;
+}
+
+export interface RfMetrics {
+  accuracy: number;
+  macro_precision: number;
+  macro_recall: number;
+  macro_f1: number;
+  per_class: RfClassMetrics[];
+}
+
 export interface Meta {
   feature_importances: FeatureImportance[] | null;
   predicted_vs_actual: PredictedVsActualPoint[];
   misclassified: MisclassifiedEntry[];
   model_note: string | null;
+  rf_metrics: RfMetrics | null;
   performance_label_distribution: Record<string, number>;
   total_race_entries: number;
 }
