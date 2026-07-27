@@ -48,6 +48,7 @@ export default function DriverBarChart({ data, neutral = 50, domain = [0, 100] }
           labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
           contentStyle={{ background: COLORS.surface, border: "1px solid #38383e" }}
           labelStyle={{ color: COLORS.text }}
+          itemStyle={{ color: COLORS.text }}
         />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           {sorted.map((d) => (
