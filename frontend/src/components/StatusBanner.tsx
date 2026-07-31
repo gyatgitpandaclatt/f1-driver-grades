@@ -4,11 +4,12 @@ interface Props {
   status: UIStatus;
   message: string | null;
   onRetry: () => void;
+  loadingMessage?: string;
 }
 
-export default function StatusBanner({ status, message, onRetry }: Props) {
+export default function StatusBanner({ status, message, onRetry, loadingMessage }: Props) {
   if (status === "loading") {
-    return <div className="status-banner">Loading driver grades…</div>;
+    return <div className="status-banner">{loadingMessage ?? "Loading driver grades…"}</div>;
   }
 
   if (status === "no_data") {

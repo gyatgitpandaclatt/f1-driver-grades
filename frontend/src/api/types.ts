@@ -101,3 +101,99 @@ export interface ErrorResponse {
 }
 
 export type DriverGradesApiResult = DriverGradesResponse | NoDataResponse | ErrorResponse;
+
+// --- Race Summary ---
+// Mirrors backend/app/race_summary/models.py field-for-field. Keep in sync.
+
+export interface FinalClassificationEntry {
+  position: number;
+  driver_code: string;
+}
+
+export interface Overtake {
+  lap: number;
+  overtaking_driver: string;
+  overtaken_driver: string;
+  track_status: string;
+}
+
+export interface PitStop {
+  driver: string;
+  lap_number: number;
+  compound: string | null;
+  duration_seconds: number | null;
+  tyre_life: number | null;
+}
+
+export interface Stint {
+  driver: string;
+  compound: string;
+  lap_start: number;
+  lap_end: number;
+}
+
+export interface Battle {
+  driver1: string;
+  driver2: string;
+  close_laps: number;
+}
+
+export interface SafetyCarEvent {
+  time: string;
+  message: string;
+  lap: number | null;
+}
+
+export interface TelemetryHighlight {
+  driver: string;
+  max_speed_kph: number | null;
+  top_speed_lap: number | null;
+}
+
+export interface RaceSummarySections {
+  summary: string;
+  lap_highlights: string;
+  pit_analysis: string;
+  overtakes_battles: string;
+  telemetry_spotlight: string;
+  driver_of_the_day: string;
+}
+
+export interface SpeedTracePoint {
+  distance: number;
+  speed: number;
+}
+
+export interface RaceSummaryChartData {
+  // Each row is {lap: N, <driver_code>: position, ...}
+  position_series: Record<string, number>[];
+  speed_traces: Record<string, SpeedTracePoint[]>;
+}
+
+export interface RaceSummaryContext {
+  race_name: string;
+  year: number;
+  round: number;
+  total_laps: number;
+  weather_summary: string;
+  final_classification: FinalClassificationEntry[];
+  pit_stops: PitStop[];
+  overtakes: Overtake[];
+  key_events: SafetyCarEvent[];
+  strategies: Stint[];
+  battles: Battle[];
+  telemetry_highlights: TelemetryHighlight[];
+}
+
+export interface RaceSummaryResponse {
+  status: "ok";
+  season: number;
+  round: number;
+  race_name: string;
+  last_updated: string;
+  sections: RaceSummarySections;
+  context: RaceSummaryContext;
+  charts: RaceSummaryChartData;
+}
+
+export type RaceSummaryApiResult = RaceSummaryResponse | NoDataResponse | ErrorResponse;
