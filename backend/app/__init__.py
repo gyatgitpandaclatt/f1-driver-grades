@@ -7,3 +7,12 @@
 import truststore
 
 truststore.inject_into_ssl()
+
+# Load backend/.env (if present) before any submodule reads a process env var
+# at import time — e.g. race_summary.narrator constructs its Anthropic()
+# client as soon as it's imported, so ANTHROPIC_API_KEY must already be set.
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")

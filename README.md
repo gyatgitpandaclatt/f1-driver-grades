@@ -62,3 +62,10 @@ Replit auto-detect Python + Node.js instead.
 - The backend caches computed results in memory (~20 min TTL) to avoid
   hammering the upstream API on every page load. Use the Refresh button in the
   UI (or `POST /api/refresh`) to force a recompute.
+- The Race Summary page (`/race-summary`, backed by `backend/app/race_summary/`)
+  requires an `ANTHROPIC_API_KEY` (used to write the race narrative) — copy
+  `backend/.env.example` to `backend/.env` and fill it in (loaded
+  automatically on startup), or set it as a real environment variable. It
+  also downloads lap/telemetry data via FastF1 on first request, cached to
+  `backend/fastf1_cache/`; the first load for a given race can take a minute
+  or two.

@@ -6,6 +6,7 @@ const LINKS = [
   { to: "/qualifying-h2h", label: "Qualifying H2H" },
   { to: "/overperformance", label: "Overperformance" },
   { to: "/grid-improvement", label: "Grid Improvement" },
+  { to: "/race-summary", label: "Race Summary" },
   { to: "/methodology", label: "Methodology" },
 ];
 

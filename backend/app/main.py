@@ -9,7 +9,9 @@ from fastapi.staticfiles import StaticFiles
 
 from . import cache
 from .config import SEASON
-from .exceptions import NoRaceDataError, UpstreamAPIError
+from .exceptions import NarrativeGenerationError, NoRaceDataError, RaceSessionNotAvailableError, UpstreamAPIError
+from .race_summary import cache as race_summary_cache
+from .race_summary.models import RaceSummaryResponse
 from .schemas import DriverGradesResponse
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
@@ -47,12 +49,33 @@ async def upstream_error_handler(request: Request, exc: UpstreamAPIError):
     })
 
 
+@app.exception_handler(RaceSessionNotAvailableError)
+async def race_session_not_available_handler(request: Request, exc: RaceSessionNotAvailableError):
+    # Mirrors the NoRaceDataError handler above: a legitimate empty state
+    # (FastF1 hasn't published session data for the latest round yet), not a
+    # server fault.
+    return JSONResponse(status_code=200, content={
+        "status": "no_data",
+        "season": SEASON,
+        "message": str(exc),
+    })
+
+
+@app.exception_handler(NarrativeGenerationError)
+async def narrative_generation_error_handler(request: Request, exc: NarrativeGenerationError):
+    logger.warning("Narrative generation error: %s", exc)
+    return JSONResponse(status_code=502, content={
+        "status": "error",
+        "message": "Could not generate the race narrative. Please try again shortly.",
+    })
+
+
 @app.exception_handler(Exception)
 async def generic_error_handler(request: Request, exc: Exception):
     logger.exception("Unhandled error")
     return JSONResponse(status_code=500, content={
         "status": "error",
-        "message": "Something went wrong while computing driver grades.",
+        "message": "Something went wrong while processing your request.",
     })
 
 
@@ -74,6 +97,16 @@ async def get_driver_grades():
 @app.post("/api/refresh", response_model=DriverGradesResponse)
 async def refresh_driver_grades():
     return await run_in_threadpool(cache.force_refresh, SEASON)
+
+
+@app.get("/api/race-summary", response_model=RaceSummaryResponse)
+async def get_race_summary():
+    return await run_in_threadpool(race_summary_cache.get_or_compute, SEASON)
+
+
+@app.post("/api/race-summary/refresh", response_model=RaceSummaryResponse)
+async def refresh_race_summary():
+    return await run_in_threadpool(race_summary_cache.force_refresh, SEASON)
 
 
 # Serve the built frontend (frontend/dist, produced by `npm run build`) so
