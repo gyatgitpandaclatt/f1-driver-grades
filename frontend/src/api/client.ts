@@ -1,4 +1,4 @@
-import type { DriverGradesApiResult, RaceSummaryApiResult } from "./types";
+import type { DriverGradesApiResult, HealthResponse, RaceSummaryApiResult } from "./types";
 
 // Relative paths: in dev, Vite's server.proxy forwards /api to the backend
 // (see vite.config.ts); in production, FastAPI serves the built frontend
@@ -9,6 +9,11 @@ async function parseResult<T>(res: Response): Promise<T> {
   // 502/500 (see main.py exception handlers), so we can parse regardless
   // of res.ok.
   return (await res.json()) as T;
+}
+
+export async function fetchHealth(): Promise<HealthResponse> {
+  const res = await fetch("/api/health");
+  return parseResult<HealthResponse>(res);
 }
 
 export async function fetchDriverGrades(): Promise<DriverGradesApiResult> {

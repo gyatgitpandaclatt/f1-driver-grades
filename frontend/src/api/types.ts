@@ -1,5 +1,10 @@
 // Mirrors backend/app/schemas.py field-for-field. Keep in sync.
 
+export interface HealthResponse {
+  status: "ok";
+  race_summary_available: boolean;
+}
+
 export interface DriverGrade {
   driver_code: string;
   driver_name: string;

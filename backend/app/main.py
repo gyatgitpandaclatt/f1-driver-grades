@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import cache
-from .config import SEASON
+from .config import RACE_SUMMARY_AVAILABLE, SEASON
 from .exceptions import NarrativeGenerationError, NoRaceDataError, RaceSessionNotAvailableError, UpstreamAPIError
 from .race_summary import cache as race_summary_cache
 from .race_summary.models import RaceSummaryResponse
@@ -86,7 +86,7 @@ async def startup_event():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "race_summary_available": RACE_SUMMARY_AVAILABLE}
 
 
 @app.get("/api/driver-grades", response_model=DriverGradesResponse)
@@ -99,13 +99,25 @@ async def refresh_driver_grades():
     return await run_in_threadpool(cache.force_refresh, SEASON)
 
 
+def _race_summary_unavailable_response() -> JSONResponse:
+    return JSONResponse(status_code=200, content={
+        "status": "error",
+        "message": "Race Summary isn't available in this environment: F1's live-timing "
+                   "servers block requests from Replit's IP ranges.",
+    })
+
+
 @app.get("/api/race-summary", response_model=RaceSummaryResponse)
 async def get_race_summary():
+    if not RACE_SUMMARY_AVAILABLE:
+        return _race_summary_unavailable_response()
     return await run_in_threadpool(race_summary_cache.get_or_compute, SEASON)
 
 
 @app.post("/api/race-summary/refresh", response_model=RaceSummaryResponse)
 async def refresh_race_summary():
+    if not RACE_SUMMARY_AVAILABLE:
+        return _race_summary_unavailable_response()
     return await run_in_threadpool(race_summary_cache.force_refresh, SEASON)
 
 

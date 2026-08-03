@@ -1,4 +1,6 @@
-# 
+import os
+
+#
 # SEASON-SPECIFIC — UPDATE EACH YEAR
 SEASON = 2026
 
@@ -45,3 +47,8 @@ PAGE_LIMIT = 100
 RACE_SUMMARY_CACHE_TTL_SECONDS = 6 * 60 * 60
 FASTF1_CACHE_DIR = "fastf1_cache"
 ANTHROPIC_MODEL = "claude-opus-5"
+
+# FastF1's live-timing data source blocks requests from Replit's IP ranges
+# (both the dev workspace and deployments) as an anti-scraping measure, so
+# the feature can never work there — REPL_ID is set by Replit in both.
+RACE_SUMMARY_AVAILABLE = os.environ.get("REPL_ID") is None
