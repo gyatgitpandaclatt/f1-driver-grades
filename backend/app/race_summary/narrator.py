@@ -9,8 +9,6 @@ from anthropic import Anthropic
 from ..config import ANTHROPIC_MODEL
 from ..exceptions import NarrativeGenerationError
 
-client = Anthropic()
-
 SYSTEM_PROMPT = """You are a professional Formula 1 race analyst and journalist.
 Given structured race data, write a detailed, engaging race report in the style of
 Autosport or The Race.
@@ -82,6 +80,11 @@ Write a full race report and submit it via the submit_race_report tool.
 
 
 def generate_narrative(context: dict) -> dict:
+    # Constructed lazily (rather than at module import time) so a missing
+    # ANTHROPIC_API_KEY surfaces as a clear NarrativeGenerationError on the
+    # first request instead of crashing the whole race_summary import chain
+    # at startup with an unrelated-looking error.
+    client = Anthropic()
     user_prompt = _build_user_prompt(context)
     try:
         response = client.messages.create(
@@ -96,6 +99,16 @@ def generate_narrative(context: dict) -> dict:
         raise NarrativeGenerationError(f"Could not reach the Claude API: {exc}") from exc
     except anthropic.APIStatusError as exc:
         raise NarrativeGenerationError(f"Claude API error: {exc}") from exc
+    except TypeError as exc:
+        # With no credentials configured anywhere (no ANTHROPIC_API_KEY, no
+        # auth token, no profile), the SDK doesn't fail at Anthropic() — it
+        # defers the check until the request is built and raises a plain
+        # TypeError from _validate_headers, not an anthropic.* exception.
+        if "authentication" not in str(exc).lower():
+            raise
+        raise NarrativeGenerationError(
+            "ANTHROPIC_API_KEY is not configured in this environment."
+        ) from exc
 
     if response.stop_reason == "refusal":
         raise NarrativeGenerationError("The narrative generator declined to write this report.")
