@@ -18,7 +18,7 @@ interface Props {
   highlightDrivers: string[];
 }
 
-const MUTED_STROKE = "#3a3a46";
+const MUTED_STROKE = COLORS.text;
 
 interface TooltipPayloadEntry {
   dataKey: string;
