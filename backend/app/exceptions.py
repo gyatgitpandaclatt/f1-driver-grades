@@ -7,7 +7,7 @@ class NoRaceDataError(Exception):
 
 
 class RaceSessionNotAvailableError(Exception):
-    """Raised when FastF1 has no session data yet for the latest completed round."""
+    """Raised when the data provider has no results yet for the latest completed round."""
 
 
 class NarrativeGenerationError(Exception):

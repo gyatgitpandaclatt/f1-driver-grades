@@ -52,7 +52,7 @@ async def upstream_error_handler(request: Request, exc: UpstreamAPIError):
 @app.exception_handler(RaceSessionNotAvailableError)
 async def race_session_not_available_handler(request: Request, exc: RaceSessionNotAvailableError):
     # Mirrors the NoRaceDataError handler above: a legitimate empty state
-    # (FastF1 hasn't published session data for the latest round yet), not a
+    # (results haven't been published for the latest round yet), not a
     # server fault.
     return JSONResponse(status_code=200, content={
         "status": "no_data",

@@ -65,7 +65,9 @@ Replit auto-detect Python + Node.js instead.
 - The Race Summary page (`/race-summary`, backed by `backend/app/race_summary/`)
   requires an `ANTHROPIC_API_KEY` (used to write the race narrative) — copy
   `backend/.env.example` to `backend/.env` and fill it in (loaded
-  automatically on startup), or set it as a real environment variable. It
-  also downloads lap/telemetry data via FastF1 on first request, cached to
-  `backend/fastf1_cache/`; the first load for a given race can take a minute
-  or two.
+  automatically on startup), or set it as a real environment variable. Race
+  data comes from the same Jolpica/Ergast API as the rest of the app (final
+  classification, lap-by-lap positions, pit stops) — there's deliberately no
+  tire compound, weather, or safety-car data, since Ergast doesn't have it;
+  the narrative is written from what's available and instructed not to guess
+  at the rest.

@@ -6,6 +6,5 @@ scikit-learn
 fastapi
 uvicorn[standard]
 pydantic
-fastf1>=3.8.3
 anthropic
 python-dotenv

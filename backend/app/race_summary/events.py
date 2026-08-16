@@ -4,11 +4,10 @@ detect notable events in race and label them
 import pandas as pd
 
 
-def detect_overtakes(position_matrix: pd.DataFrame, track_status_by_lap: dict[int, str] | None = None) -> pd.DataFrame:
+def detect_overtakes(position_matrix: pd.DataFrame) -> pd.DataFrame:
     """
     Detect overtakes by comparing the position of each driver on consecutive laps. An overtake is detected when a driver moves up in position from one lap to the next.
     """
-    track_status_by_lap = track_status_by_lap or {}
     overtakes = []
     for lap in range(2, len(position_matrix)):
         prev = position_matrix.loc[lap - 1]
@@ -22,48 +21,8 @@ def detect_overtakes(position_matrix: pd.DataFrame, track_status_by_lap: dict[in
                         'Lap': lap,
                         'OvertakingDriver': d1,
                         'OvertakenDriver': d2,
-                        'TrackStatus': track_status_by_lap.get(lap, 'GREEN'),
                     })
     return pd.DataFrame(overtakes)
-
-
-def build_track_status_by_lap(rc_messages: pd.DataFrame, total_laps: int) -> dict[int, str]:
-    """
-    Forward-filled per-lap track status ('GREEN', 'SC', 'VSC') derived from
-    race control message text and the lap number each message was logged on.
-    """
-    if 'Lap' not in rc_messages.columns or 'Message' not in rc_messages.columns:
-        return {lap: 'GREEN' for lap in range(1, total_laps + 1)}
-
-    transitions: dict[int, str] = {}
-    for _, row in rc_messages.sort_values('Time').iterrows():
-        lap = row.get('Lap')
-        if pd.isna(lap):
-            continue
-        lap = int(lap)
-        message = str(row.get('Message', '')).upper()
-        if 'VIRTUAL SAFETY CAR DEPLOYED' in message:
-            transitions[lap] = 'VSC'
-        elif 'VIRTUAL SAFETY CAR ENDING' in message:
-            transitions[lap] = 'GREEN'
-        elif 'SAFETY CAR DEPLOYED' in message:
-            transitions[lap] = 'SC'
-        elif 'SAFETY CAR IN THIS LAP' in message or 'SAFETY CAR ENDING' in message:
-            transitions[lap] = 'GREEN'
-
-    status_by_lap: dict[int, str] = {}
-    current = 'GREEN'
-    for lap in range(1, total_laps + 1):
-        if lap in transitions:
-            current = transitions[lap]
-        status_by_lap[lap] = current
-    return status_by_lap
-
-
-def detect_safety_cars(rc_messages: pd.DataFrame) -> list[dict]:
-    sc_events = rc_messages[rc_messages['Message'].str.contains('Safety Car', case=False, na=False)]
-    columns = [c for c in ('Time', 'Message', 'Lap') if c in sc_events.columns]
-    return sc_events[columns].to_dict('records')
 
 
 def _longest_consecutive_close_run(common_laps: list[int], gap: pd.Series, threshold: pd.Timedelta) -> int:
@@ -108,39 +67,3 @@ def find_battles(laps_df: pd.DataFrame, gap_threshold: float = 1.0, min_laps: in
             if longest_run >= min_laps:
                 battles.append({'Driver1': driver1, 'Driver2': driver2, 'CloseLaps': longest_run})
     return battles
-
-
-def driver_telemetry_sum(session, driver_code: str) -> dict:
-    driver_laps = session.laps.pick_drivers(driver_code)
-
-    max_speed = float('-inf')
-    top_speed_lap = None
-    speed_chunks = []
-    rpm_chunks = []
-    total_distance = 0.0
-
-    for _, lap in driver_laps.iterlaps():
-        tel = lap.get_car_data().add_distance()
-        if tel.empty:
-            continue
-
-        speed_chunks.append(tel['Speed'])
-        rpm_chunks.append(tel['RPM'])
-        total_distance += tel['Distance'].max()
-
-        lap_max_speed = tel['Speed'].max()
-        if lap_max_speed > max_speed:
-            max_speed = lap_max_speed
-            top_speed_lap = lap['LapNumber']
-
-    all_speeds = pd.concat(speed_chunks) if speed_chunks else pd.Series(dtype=float)
-    all_rpms = pd.concat(rpm_chunks) if rpm_chunks else pd.Series(dtype=float)
-
-    return {
-        'MaxSpeed': all_speeds.max() if not all_speeds.empty else None,
-        'AvgSpeed': all_speeds.mean() if not all_speeds.empty else None,
-        'MaxRPM': all_rpms.max() if not all_rpms.empty else None,
-        'AvgRPM': all_rpms.mean() if not all_rpms.empty else None,
-        'top_speed_lap': top_speed_lap,
-        'TotalDistance': total_distance,
-    }
