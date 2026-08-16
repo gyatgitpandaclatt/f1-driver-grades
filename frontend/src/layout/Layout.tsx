@@ -1,7 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { fetchHealth } from "../api/client";
 import Header from "../components/Header";
 import Nav from "../components/Nav";
 import StatusBanner from "../components/StatusBanner";
@@ -22,19 +20,6 @@ export default function Layout() {
     refreshError,
   } = useDriverGrades();
 
-  // Race Summary depends on FastF1's live-timing feed, which blocks requests
-  // from Replit's IP ranges — the backend reports whether that's the case so
-  // the tab doesn't lead somewhere guaranteed to fail. Defaults to shown so
-  // there's no flash on environments where it works (the check resolves
-  // near-instantly; it's a plain env var read, not a FastF1 call).
-  const [raceSummaryAvailable, setRaceSummaryAvailable] = useState(true);
-
-  useEffect(() => {
-    fetchHealth()
-      .then((health) => setRaceSummaryAvailable(health.race_summary_available))
-      .catch(() => {});
-  }, []);
-
   const location = useLocation();
 
   const context: LayoutContext | null =
@@ -52,7 +37,7 @@ export default function Layout() {
         refreshing={refreshing}
         refreshError={refreshError}
       />
-      <Nav raceSummaryAvailable={raceSummaryAvailable} />
+      <Nav />
 
       {status !== "ok" && <StatusBanner status={status} message={message} onRetry={refresh} />}
 

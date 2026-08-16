@@ -1,5 +1,3 @@
-import os
-
 #
 # SEASON-SPECIFIC — UPDATE EACH YEAR
 SEASON = 2026
@@ -41,14 +39,8 @@ CACHE_TTL_SECONDS = 20 * 60
 REQUEST_TIMEOUT = 10
 PAGE_LIMIT = 100
 
-# Race summarizer (FastF1 + Claude narrative) — a completed race's data never
-# changes, so this cache can be long-lived; recomputation is expensive (FastF1
-# telemetry download + an LLM call), not just an API round trip.
+# Race summarizer (Jolpica/Ergast + Claude narrative) — a completed race's
+# data never changes, so this cache can be long-lived; recomputation costs an
+# LLM call, not just an API round trip.
 RACE_SUMMARY_CACHE_TTL_SECONDS = 6 * 60 * 60
-FASTF1_CACHE_DIR = "fastf1_cache"
 ANTHROPIC_MODEL = "claude-opus-5"
-
-# FastF1's live-timing data source blocks requests from Replit's IP ranges
-# (both the dev workspace and deployments) as an anti-scraping measure, so
-# the feature can never work there — REPL_ID is set by Replit in both.
-RACE_SUMMARY_AVAILABLE = os.environ.get("REPL_ID") is None

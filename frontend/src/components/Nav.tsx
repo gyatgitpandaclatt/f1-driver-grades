@@ -10,18 +10,10 @@ const LINKS = [
   { to: "/methodology", label: "Methodology" },
 ];
 
-interface Props {
-  raceSummaryAvailable: boolean;
-}
-
-export default function Nav({ raceSummaryAvailable }: Props) {
-  const links = raceSummaryAvailable
-    ? LINKS
-    : LINKS.filter((link) => link.to !== "/race-summary");
-
+export default function Nav() {
   return (
     <nav className="nav">
-      {links.map((link) => (
+      {LINKS.map((link) => (
         <NavLink
           key={link.to}
           to={link.to}

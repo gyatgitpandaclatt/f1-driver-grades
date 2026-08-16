@@ -14,11 +14,16 @@ Given structured race data, write a detailed, engaging race report in the style 
 Autosport or The Race.
 Use specific lap numbers, driver names, and time gaps.
 Avoid generic phrases.
-Be precise and technically accurate."""
+Be precise and technically accurate.
+
+The data provided does NOT include tire compounds, weather, or safety car/VSC
+periods — do not mention, guess at, or imply any of these (e.g. don't say a
+stop was "onto softs" or a gap opened up "under the safety car"). Ground pit
+stop analysis in lap number and stop duration only."""
 
 _SECTION_TOOL = {
     "name": "submit_race_report",
-    "description": "Submit the finished race report, broken into its six sections.",
+    "description": "Submit the finished race report, broken into its sections.",
     "strict": True,
     "input_schema": {
         "type": "object",
@@ -33,19 +38,15 @@ _SECTION_TOOL = {
             },
             "pit_analysis": {
                 "type": "string",
-                "description": "Strategy breakdown for the top 5 finishers.",
+                "description": "Pit stop timing and its impact on track position for the top 5 finishers (lap number and duration only — no tire compound data is available).",
             },
             "overtakes_battles": {
                 "type": "string",
                 "description": "The most significant position fights of the race.",
             },
-            "telemetry_spotlight": {
-                "type": "string",
-                "description": "One driver's standout telemetry data point.",
-            },
             "driver_of_the_day": {
                 "type": "string",
-                "description": "A justified pick with data evidence, contrasted with the actual voted Driver of the Day.",
+                "description": "A justified pick with data evidence (positions gained, overtakes made, battles won).",
             },
         },
         "required": [
@@ -53,7 +54,6 @@ _SECTION_TOOL = {
             "lap_highlights",
             "pit_analysis",
             "overtakes_battles",
-            "telemetry_spotlight",
             "driver_of_the_day",
         ],
         "additionalProperties": False,
@@ -65,15 +65,11 @@ def _build_user_prompt(context: dict) -> str:
     return f"""
 Race: {context['race_name']}, {context['year']}
 Laps: {context['total_laps']}
-Weather: {context['weather_summary']}
 
 Final Classification: {json.dumps(context['final_classification'], indent=2)}
 Pit Stops: {json.dumps(context['pit_stops'], indent=2)}
 Overtakes: {json.dumps(context['overtakes'], indent=2)}
-Key Events: {json.dumps(context['key_events'], indent=2)}
-Tire Strategies: {json.dumps(context['strategies'], indent=2)}
 Battle Highlights: {json.dumps(context['battles'], indent=2)}
-Telemetry Highlights: {json.dumps(context['telemetry_highlights'], indent=2)}
 
 Write a full race report and submit it via the submit_race_report tool.
 """

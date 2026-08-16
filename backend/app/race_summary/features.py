@@ -1,70 +1,61 @@
 """
-extracting features from the laps data: pit stops, position history, and tire strategy.
+Turn Ergast's raw laps/pit-stop records into the position matrix and lap-time
+table the rest of race_summary works from.
 """
 import pandas as pd
 
 
-def extract_pit_stops(laps_df: pd.DataFrame) -> pd.DataFrame:
+def _parse_ergast_time(time_str: str) -> pd.Timedelta:
+    """Ergast times are "M:SS.sss" or, for sub-minute durations, "SS.sss"."""
+    if ":" in time_str:
+        minutes, rest = time_str.split(":", 1)
+        return pd.Timedelta(minutes=int(minutes)) + pd.Timedelta(seconds=float(rest))
+    return pd.Timedelta(seconds=float(time_str))
+
+
+def build_position_matrix(laps: list[dict], driver_id_to_code: dict[str, str]) -> pd.DataFrame:
     """
-    Extract pit stop information per driver: pair each in-lap (PitInTime set)
-    with the following out-lap (PitOutTime set) to compute stop duration and
-    the compound fitted during that stop.
+    Rows are lap numbers, columns are driver codes, values are that driver's
+    position on that lap. Unlike the FastF1 version, Ergast gives position
+    directly per lap -- no need to derive it from timing data.
     """
-    pit_stops = []
-    for driver, group in laps_df.sort_values('LapNumber').groupby('Driver'):
-        group = group.reset_index(drop=True)
-        in_lap_positions = group.index[group['PitInTime'].notna()]
-        for pos in in_lap_positions:
-            in_row = group.loc[pos]
-            out_candidates = group.loc[pos + 1:]
-            out_matches = out_candidates[out_candidates['PitOutTime'].notna()]
-            if out_matches.empty:
-                continue
-            out_row = out_matches.iloc[0]
-            duration = (out_row['PitOutTime'] - in_row['PitInTime']).total_seconds()
-            pit_stops.append({
-                'Driver': driver,
-                'LapNumber': int(in_row['LapNumber']),
-                'Compound': out_row.get('Compound'),
-                'PitStopDuration': duration,
-                'TyreLife': out_row.get('TyreLife'),
+    rows: dict[int, dict[str, int]] = {}
+    for lap in laps:
+        lap_number = int(lap["number"])
+        row = rows.setdefault(lap_number, {})
+        for timing in lap["Timings"]:
+            code = driver_id_to_code.get(timing["driverId"], timing["driverId"])
+            row[code] = int(timing["position"])
+    return pd.DataFrame.from_dict(rows, orient="index").sort_index()
+
+
+def build_lap_times(laps: list[dict], driver_id_to_code: dict[str, str]) -> pd.DataFrame:
+    """Long-format Driver/LapNumber/LapTime table, for events.find_battles."""
+    rows = []
+    for lap in laps:
+        lap_number = int(lap["number"])
+        for timing in lap["Timings"]:
+            code = driver_id_to_code.get(timing["driverId"], timing["driverId"])
+            rows.append({
+                "Driver": code,
+                "LapNumber": lap_number,
+                "LapTime": _parse_ergast_time(timing["time"]),
             })
-    return pd.DataFrame(pit_stops)
+    return pd.DataFrame(rows)
 
 
-def build_position_matrix(laps_df: pd.DataFrame) -> pd.DataFrame:
+def extract_pit_stops(pit_stops: list[dict], driver_id_to_code: dict[str, str]) -> pd.DataFrame:
     """
-    return a pivot table where the rows are the lap numbers, the columns are the drivers, and the values are the positions of each driver on each lap.
+    No tire compound data is available from Ergast (FastF1-only) -- this is
+    lap number and duration only.
     """
-    return laps_df.pivot_table(index='LapNumber', columns='Driver', values='Position')
-
-
-def summarize_strategy(laps_df: pd.DataFrame) -> dict[str, list[dict]]:
-    """
-    per-driver tire stint summary: compound, lap start, and lap end
-    """
-    stints: dict[str, list[dict]] = {}
-    for driver, group in laps_df.sort_values('LapNumber').groupby('Driver'):
-        group = group.copy()
-        group['Compound'] = group['Compound'].fillna('UNKNOWN')
-
-        driver_stints = []
-        previous_compound = None
-        stint_start = int(group['LapNumber'].iloc[0])
-        for _, row in group.iterrows():
-            if row['Compound'] != previous_compound and previous_compound is not None:
-                driver_stints.append({
-                    'Compound': previous_compound,
-                    'LapStart': stint_start,
-                    'LapEnd': int(row['LapNumber']) - 1,
-                })
-                stint_start = int(row['LapNumber'])
-            previous_compound = row['Compound']
-
-        driver_stints.append({
-            'Compound': previous_compound,
-            'LapStart': stint_start,
-            'LapEnd': int(group['LapNumber'].max()),
+    rows = []
+    for stop in pit_stops:
+        code = driver_id_to_code.get(stop["driverId"], stop["driverId"])
+        rows.append({
+            "Driver": code,
+            "LapNumber": int(stop["lap"]),
+            "StopNumber": int(stop["stop"]),
+            "PitStopDuration": _parse_ergast_time(stop["duration"]).total_seconds(),
         })
-        stints[driver] = driver_stints
-    return stints
+    return pd.DataFrame(rows)

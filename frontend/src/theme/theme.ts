@@ -36,15 +36,3 @@ export const LABEL_Y: Record<string, number> = {
 };
 
 export const Y_LABEL_ORDER = ["underperformer", "expected", "overperformer"];
-
-// Real-world F1 tire compound colors (Pirelli sidewall convention) — kept as
-// a fixed domain mapping rather than the generic categorical palette, since
-// these colors carry real-world meaning fans already recognize.
-export const COMPOUND_COLORS: Record<string, string> = {
-  SOFT: "#ff4d4d",
-  MEDIUM: "#ffd400",
-  HARD: "#f0f0f5",
-  INTERMEDIATE: "#00d68f",
-  WET: "#4db8ff",
-  UNKNOWN: "#7878a0",
-};
