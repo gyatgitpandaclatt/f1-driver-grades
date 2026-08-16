@@ -24,7 +24,7 @@ export default function NarrativeSection({ text }: Props) {
   const blocks = text.trim().split(/\n\s*\n/);
 
   return (
-    <>
+    <div className="narrative-section">
       {blocks.map((block, i) => {
         const lines = block
           .split("\n")
@@ -44,6 +44,6 @@ export default function NarrativeSection({ text }: Props) {
 
         return <p key={i}>{renderInline(block.replace(/\n/g, " "), `${i}`)}</p>;
       })}
-    </>
+    </div>
   );
 }

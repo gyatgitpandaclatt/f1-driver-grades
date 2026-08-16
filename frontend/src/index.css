@@ -479,6 +479,14 @@ tbody tr:nth-child(even):hover {
   margin-bottom: 18px;
 }
 
+/* Race Summary's narrative text is the main content of the page (unlike
+   Methodology's supporting paragraphs), so it gets full-brightness text
+   instead of the muted --text-secondary the rest of .prose uses. */
+.narrative-section p,
+.narrative-section li {
+  color: var(--text);
+}
+
 /* ── STAT TILES ── */
 .stat-grid {
   display: grid;
