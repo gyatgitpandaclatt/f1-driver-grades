@@ -7,7 +7,7 @@ WORKDIR /app/frontend
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NODE_OPTIONS=--dns-result-order=ipv4first
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --no-audit --no-fund; test -x node_modules/.bin/tsc || npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --maxsockets=3; test -x node_modules/.bin/tsc || npm ci --no-audit --no-fund --maxsockets=3
 COPY frontend/ ./
 RUN npm run build
 
