@@ -2,11 +2,11 @@
 # (which serves the built frontend as static files). See README.md for the
 # non-Docker equivalent of these same two steps.
 
-FROM node:20-slim AS frontend-build
+FROM node:22-slim AS frontend-build
 WORKDIR /app/frontend
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --no-audit --no-fund || npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund; test -x node_modules/.bin/tsc || npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
