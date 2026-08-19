@@ -55,6 +55,37 @@ Nix channel in `.replit`/`replit.nix` is stale by the time you read this,
 Replit will prompt you to fix it, or you can just delete both files and let
 Replit auto-detect Python + Node.js instead.
 
+## Deploying to Render
+
+The app is set up to deploy as a single Docker web service via `render.yaml`
+(a Render "Blueprint") — Docker is used because the image needs both Node
+(to build the frontend) and Python (to run the backend); Render's native
+Python runtime doesn't include Node. The `Dockerfile` does the same two
+steps as `start.sh`: build `frontend/dist`, then run uvicorn.
+
+1. Push this repo to GitHub (if not already).
+2. In the Render dashboard: **New > Blueprint**, point it at the repo.
+   Render reads `render.yaml` and creates the web service automatically.
+3. Set the `ANTHROPIC_API_KEY` env var on the service (Render dashboard >
+   service > Environment) — it's marked `sync: false` in `render.yaml` so
+   it isn't committed to the repo; you enter the real value in the
+   dashboard, same as `backend/.env` does locally.
+4. Render builds the Docker image and starts the service; `/api/health` is
+   used as the health check path.
+
+No frontend code changes are needed for this move: the frontend only ever
+calls relative paths like `/api/driver-grades` (see `frontend/src/api/client.ts`),
+so it works unmodified on whatever host/domain serves it, same as it does
+on Replit.
+
+To test the exact production image locally before deploying, with Docker
+installed:
+
+```
+docker build -t f1-driver-grades .
+docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... f1-driver-grades
+```
+
 ## Notes
 
 - `backend/app/config.py` holds season-specific settings (season year, rookie
