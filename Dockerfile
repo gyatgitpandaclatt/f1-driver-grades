@@ -4,8 +4,9 @@
 
 FROM node:20-slim AS frontend-build
 WORKDIR /app/frontend
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund || npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
