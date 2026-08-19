@@ -4,12 +4,11 @@
 
 FROM node:22-slim AS frontend-build
 WORKDIR /app/frontend
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
-ENV NODE_OPTIONS=--dns-result-order=ipv4first
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --no-audit --no-fund --maxsockets=3; test -x node_modules/.bin/tsc || npm ci --no-audit --no-fund --maxsockets=3
+RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY frontend/package.json ./
+RUN pnpm install
 COPY frontend/ ./
-RUN npm run build
+RUN pnpm run build
 
 FROM python:3.12-slim
 WORKDIR /app
