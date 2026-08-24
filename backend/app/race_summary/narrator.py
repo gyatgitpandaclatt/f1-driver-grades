@@ -19,7 +19,12 @@ Be precise and technically accurate.
 The data provided does NOT include tire compounds, weather, or safety car/VSC
 periods — do not mention, guess at, or imply any of these (e.g. don't say a
 stop was "onto softs" or a gap opened up "under the safety car"). Ground pit
-stop analysis in lap number and stop duration only."""
+stop analysis in lap number and stop duration only.
+
+Any "Lineup Notes" in the race data are verified facts about who drove which
+car and why, supplied because the results feed does not carry that context.
+Work them into the report where they matter to the story. Do not infer any
+other lineup change, injury, or substitution beyond the notes given."""
 
 _SECTION_TOOL = {
     "name": "submit_race_report",
@@ -62,11 +67,17 @@ _SECTION_TOOL = {
 
 
 def _build_user_prompt(context: dict) -> str:
+    lineup_notes = context.get('lineup_notes') or []
+    lineup_section = (
+        "Lineup Notes:\n" + "\n".join(f"- {note}" for note in lineup_notes) + "\n\n"
+        if lineup_notes
+        else ""
+    )
     return f"""
 Race: {context['race_name']}, {context['year']}
 Laps: {context['total_laps']}
 
-Final Classification: {json.dumps(context['final_classification'], indent=2)}
+{lineup_section}Final Classification: {json.dumps(context['final_classification'], indent=2)}
 Pit Stops: {json.dumps(context['pit_stops'], indent=2)}
 Overtakes: {json.dumps(context['overtakes'], indent=2)}
 Battle Highlights: {json.dumps(context['battles'], indent=2)}

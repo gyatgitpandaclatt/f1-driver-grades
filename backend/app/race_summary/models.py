@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class FinalClassificationEntry(BaseModel):
     position: int
     driver_code: str
+    constructor: str
     status: str  # "Finished", "+1 Lap", "Retired", "Accident", "Engine", ...
 
 
@@ -51,6 +52,9 @@ class RaceSummaryContext(BaseModel):
     pit_stops: List[PitStopOut]
     overtakes: List[OvertakeOut]
     battles: List[BattleOut]
+    # Lineup facts the provider does not carry (e.g. a stand-in driver),
+    # supplied from config and confirmed against this race's classification.
+    lineup_notes: List[str] = []
 
 
 class RaceSummaryResponse(BaseModel):

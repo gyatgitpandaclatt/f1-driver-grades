@@ -121,6 +121,7 @@ export type DriverGradesApiResult =
 export interface FinalClassificationEntry {
   position: number;
   driver_code: string;
+  constructor: string;
   status: string;
 }
 
@@ -165,6 +166,9 @@ export interface RaceSummaryContext {
   pit_stops: PitStop[];
   overtakes: Overtake[];
   battles: Battle[];
+  // Lineup facts the data provider does not carry (e.g. a stand-in driver),
+  // confirmed against this race's entry list before being handed to Claude.
+  lineup_notes: string[];
 }
 
 export interface RaceSummaryResponse {

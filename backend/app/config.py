@@ -5,6 +5,12 @@ SEASON = 2026
 # Driver codes for drivers in their first full F1 season this year.
 ROOKIES = {"LIN"}
 
+# Drivers with fewer completed races than this are left out of the grades.
+# A one-off stand-in has nowhere near enough data for a season grade, and
+# their volatile per-race numbers would skew both the model and the score
+# normalisation for everyone else.
+MIN_RACES_FOR_GRADE = 2
+
 # Lower tier number = stronger car. Unlisted constructors default to
 # DEFAULT_CONSTRUCTOR_TIER below.
 CONSTRUCTOR_TIER = {
@@ -77,3 +83,26 @@ ANTHROPIC_MODEL = "claude-opus-5"
 # rather than "how long may a slow generation take" — it stops a wedged call
 # from pinning the cache's single-flight lock.
 NARRATIVE_TIMEOUT_SECONDS = 180.0
+
+# Lineup facts the data provider does not carry. Ergast/Jolpica records which
+# car a driver drove, but never *why* a lineup changed, and a race report that
+# cannot explain a stand-in reads as if it missed the story.
+#
+# A note is handed to the narrator only when that race's own classification
+# shows the driver in that constructor, so it cannot leak into a race the
+# substitution does not apply to, and it stops appearing by itself once the
+# regular driver is back. Race summary only — the grades pipeline never reads
+# this.
+#
+# Revisit a note if the same pairing recurs for a different reason: the
+# pairing is what is matched, the stated reason is not verified.
+RACE_SUMMARY_LINEUP_NOTES = [
+    {
+        "driver_code": "LAW",
+        "constructor": "Red Bull",
+        "note": (
+            "Liam Lawson drove for Red Bull in this race, standing in for "
+            "Isack Hadjar, who was injured."
+        ),
+    },
+]
