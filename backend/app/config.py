@@ -5,6 +5,12 @@ SEASON = 2026
 # Driver codes for drivers in their first full F1 season this year.
 ROOKIES = {"LIN"}
 
+# Drivers with fewer completed races than this are left out of the grades.
+# A one-off stand-in has nowhere near enough data for a season grade, and
+# their volatile per-race numbers would skew both the model and the score
+# normalisation for everyone else.
+MIN_RACES_FOR_GRADE = 2
+
 # Lower tier number = stronger car. Unlisted constructors default to
 # DEFAULT_CONSTRUCTOR_TIER below.
 CONSTRUCTOR_TIER = {

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .config import ROOKIES
+from .config import MIN_RACES_FOR_GRADE, ROOKIES
 
 
 def build_driver_season_table(model_df: pd.DataFrame) -> pd.DataFrame:
@@ -16,6 +16,25 @@ def build_driver_season_table(model_df: pd.DataFrame) -> pd.DataFrame:
     )
     driver_season_df["is_rookie"] = driver_season_df["driver_code"].isin(ROOKIES).astype(int)
     return driver_season_df
+
+
+def filter_gradeable_drivers(
+    driver_season_df: pd.DataFrame, min_races: int = MIN_RACES_FOR_GRADE
+) -> pd.DataFrame:
+    """Drop drivers with too few races to be graded meaningfully.
+
+    Applied to the per-driver table only, so an excluded driver's races
+    still count everywhere they are a fact about someone else: the per-race
+    label distribution, and their teammate's qualifying head-to-head record.
+
+    Falls back to the unfiltered table if nobody clears the bar — after
+    round 1 every driver has a single race, and an empty table would leave
+    the page with nothing to show at all.
+    """
+    eligible = driver_season_df[driver_season_df["races"] >= min_races]
+    if eligible.empty:
+        return driver_season_df
+    return eligible.reset_index(drop=True)
 
 
 def _assign_season_label(row) -> str:

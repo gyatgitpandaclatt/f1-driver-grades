@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from .aggregate import assign_season_label, build_driver_season_table
+from .aggregate import assign_season_label, build_driver_season_table, filter_gradeable_drivers
 from .config import SEASON
 from .data_fetch import fetch_driver_standings, fetch_qualifying_results, fetch_race_results
 from .exceptions import NoRaceDataError
@@ -61,6 +61,10 @@ def run_pipeline(season: int = SEASON) -> dict:
     model_df = build_target(features_df)
 
     driver_season_df = build_driver_season_table(model_df)
+    # Before labelling or modelling: a one-race stand-in is noise to train on
+    # and would stretch the score normalisation the rest of the grid is
+    # measured against.
+    driver_season_df = filter_gradeable_drivers(driver_season_df)
     season_labeled_df = assign_season_label(driver_season_df)
 
     season_labeled_df, feature_importances, model_note, rf_metrics = run_model(season_labeled_df)
