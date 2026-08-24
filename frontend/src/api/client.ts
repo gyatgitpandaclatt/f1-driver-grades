@@ -6,9 +6,20 @@ import type { DriverGradesApiResult, RaceSummaryApiResult } from "./types";
 
 async function parseResult<T>(res: Response): Promise<T> {
   // The backend always returns a JSON body with a `status` field, even on
-  // 502/500 (see main.py exception handlers), so we can parse regardless
-  // of res.ok.
-  return (await res.json()) as T;
+  // 502/503/500 (see main.py exception handlers), so we can parse regardless
+  // of res.ok — but something between us and it may not. A proxy that cuts a
+  // slow request, or a gateway error page, returns HTML, and res.json() then
+  // throws, which the hooks could only report as the misleading "could not
+  // reach the backend". Fall back to a real error result instead.
+  const body = await res.text();
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    const message = res.ok
+      ? "The server sent a response we could not read. Please try again."
+      : `The server returned an error (HTTP ${res.status}). Please try again shortly.`;
+    return { status: "error", message } as T;
+  }
 }
 
 export async function fetchDriverGrades(): Promise<DriverGradesApiResult> {

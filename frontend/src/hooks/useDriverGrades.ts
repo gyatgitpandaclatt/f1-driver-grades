@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchDriverGrades, refreshDriverGrades } from "../api/client";
+import { useAutoRetry } from "./useAutoRetry";
 import type { DriverGrade, Meta } from "../api/types";
 
-export type UIStatus = "loading" | "ok" | "error" | "no_data";
+export type UIStatus = "loading" | "ok" | "error" | "no_data" | "busy";
 
 interface State {
   status: UIStatus;
@@ -31,11 +32,22 @@ export function useDriverGrades() {
   const [state, setState] = useState<State>(initialState);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const loadRef = useRef<(() => void) | null>(null);
+  const { schedule, cancel } = useAutoRetry(loadRef);
 
   const load = useCallback(async () => {
+    // Supersede any retry already scheduled: without this, a timer armed by
+    // an earlier "busy" response fires after this load succeeds and throws
+    // the page back to a loading state over data that is already good.
+    cancel();
     setState((s) => ({ ...s, status: "loading" }));
     try {
       const result = await fetchDriverGrades();
+      if (result.status === "busy") {
+        setState((s) => ({ ...s, status: "busy", message: result.message }));
+        schedule(result.retry_after);
+        return;
+      }
       if (result.status === "ok") {
         setState({
           status: "ok",
@@ -52,13 +64,23 @@ export function useDriverGrades() {
     } catch {
       setState((s) => ({ ...s, status: "error", message: UNREACHABLE_MESSAGE }));
     }
-  }, []);
+  }, [cancel, schedule]);
 
   const refresh = useCallback(async () => {
+    cancel();
     setRefreshing(true);
     setRefreshError(null);
     try {
       const result = await refreshDriverGrades();
+      if (result.status === "busy") {
+        if (state.status !== "ok") {
+          setState((s) => ({ ...s, status: "busy", message: result.message }));
+        } else {
+          setRefreshError(result.message);
+        }
+        schedule(result.retry_after);
+        return;
+      }
       if (result.status === "ok") {
         setState({
           status: "ok",
@@ -87,11 +109,16 @@ export function useDriverGrades() {
     } finally {
       setRefreshing(false);
     }
-  }, [state.status]);
+  }, [state.status, cancel, schedule]);
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     load();
-  }, [load]);
+    return cancel;
+  }, [load, cancel]);
 
   return { ...state, refresh, refreshing, refreshError };
 }

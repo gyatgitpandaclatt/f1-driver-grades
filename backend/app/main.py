@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -9,7 +10,13 @@ from fastapi.staticfiles import StaticFiles
 
 from . import cache
 from .config import SEASON
-from .exceptions import NarrativeGenerationError, NoRaceDataError, RaceSessionNotAvailableError, UpstreamAPIError
+from .exceptions import (
+    NarrativeGenerationError,
+    NoRaceDataError,
+    RaceSessionNotAvailableError,
+    UpstreamAPIError,
+    UpstreamRateLimitedError,
+)
 from .race_summary import cache as race_summary_cache
 from .race_summary.models import RaceSummaryResponse
 from .schemas import DriverGradesResponse
@@ -38,6 +45,26 @@ async def no_race_data_handler(request: Request, exc: NoRaceDataError):
         "season": SEASON,
         "message": str(exc),
     })
+
+
+@app.exception_handler(UpstreamRateLimitedError)
+async def upstream_rate_limited_handler(request: Request, exc: UpstreamRateLimitedError):
+    # A 429 from the provider is "we're busy, come back shortly" — 503 with a
+    # Retry-After says exactly that to the browser and to the frontend, where
+    # a 502 would claim the gateway itself is broken.
+    logger.warning("Upstream rate limited: %s", exc)
+    return JSONResponse(
+        status_code=503,
+        headers={"Retry-After": str(exc.retry_after)},
+        content={
+            "status": "busy",
+            "retry_after": exc.retry_after,
+            "message": (
+                "The F1 data provider is rate limiting us right now. "
+                f"Retrying in about {exc.retry_after}s."
+            ),
+        },
+    )
 
 
 @app.exception_handler(UpstreamAPIError)
@@ -79,9 +106,21 @@ async def generic_error_handler(request: Request, exc: Exception):
     })
 
 
+def _warm_caches() -> None:
+    # Grades first (cheap, and it's the landing page), then the race summary,
+    # which is the slow one: a run of upstream pages plus a Claude call. Warm
+    # it here so the first visitor to /race-summary reads a cache instead of
+    # waiting out the whole pipeline.
+    cache.try_warm_cache(SEASON)
+    race_summary_cache.try_warm_cache(SEASON)
+
+
 @app.on_event("startup")
 async def startup_event():
-    await run_in_threadpool(cache.try_warm_cache, SEASON)
+    # In a background thread, not awaited: uvicorn does not start accepting
+    # connections until startup handlers return, so warming inline made the
+    # site unreachable (not merely slow) for the length of the warm.
+    threading.Thread(target=_warm_caches, name="cache-warm", daemon=True).start()
 
 
 @app.get("/api/health")

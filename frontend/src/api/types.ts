@@ -100,7 +100,20 @@ export interface ErrorResponse {
   message: string;
 }
 
-export type DriverGradesApiResult = DriverGradesResponse | NoDataResponse | ErrorResponse;
+// HTTP 503 — the upstream F1 provider is rate limiting us. Distinct from
+// "error" because it is expected to clear on its own; `retry_after` is the
+// provider's own Retry-After, in seconds.
+export interface BusyResponse {
+  status: "busy";
+  retry_after: number;
+  message: string;
+}
+
+export type DriverGradesApiResult =
+  | DriverGradesResponse
+  | NoDataResponse
+  | BusyResponse
+  | ErrorResponse;
 
 // --- Race Summary ---
 // Mirrors backend/app/race_summary/models.py field-for-field. Keep in sync.
@@ -165,4 +178,8 @@ export interface RaceSummaryResponse {
   charts: RaceSummaryChartData;
 }
 
-export type RaceSummaryApiResult = RaceSummaryResponse | NoDataResponse | ErrorResponse;
+export type RaceSummaryApiResult =
+  | RaceSummaryResponse
+  | NoDataResponse
+  | BusyResponse
+  | ErrorResponse;

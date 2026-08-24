@@ -20,6 +20,17 @@ export default function StatusBanner({ status, message, onRetry, loadingMessage 
     );
   }
 
+  if (status === "busy") {
+    // Upstream rate limit: the hook is already counting down to a reload, so
+    // this is a wait, not a failure. Retry stays available for the impatient.
+    return (
+      <div className="status-banner">
+        <div>{message ?? "The F1 data provider is busy. Retrying shortly…"}</div>
+        <button onClick={onRetry}>Retry now</button>
+      </div>
+    );
+  }
+
   if (status === "error") {
     return (
       <div className="status-banner error">

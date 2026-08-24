@@ -4,9 +4,73 @@ API (the same provider the rest of this app already uses). Unlike FastF1, this
 has no telemetry, tire compound, weather, or race-control data -- see
 race_summary/README notes in pipeline.py for what that means for the narrative.
 """
-from ..config import API_BASE_URL, PAGE_LIMIT
+import threading
+import time
+
+from ..config import (
+    API_BASE_URL,
+    INCOMPLETE_ROUND_CACHE_TTL_SECONDS,
+    PAGE_LIMIT,
+    ROUND_CACHE_MAX_ROUNDS,
+)
 from ..data_fetch import _get_json
 from ..exceptions import RaceSessionNotAvailableError, UpstreamAPIError
+
+# Raw per-round payloads, keyed by (season, round). Values are
+# (expires_at, data) where expires_at is None for "never" — a completed
+# race's results, laps, and pit stops are immutable once published, so the
+# only entries that expire are rounds whose lap data hasn't landed yet.
+#
+# This is per-process state: it's correct under uvicorn's default single
+# worker (what start.sh and the Dockerfile run). If this ever scales to
+# multiple workers, back it with Redis or SQLite instead — an in-memory
+# dict is duplicated per worker, multiplying upstream calls by the worker
+# count.
+_round_cache: dict[tuple[int, int], tuple[float | None, dict]] = {}
+_round_cache_lock = threading.Lock()
+
+
+def _cache_get(key: tuple[int, int]) -> dict | None:
+    with _round_cache_lock:
+        entry = _round_cache.get(key)
+        if entry is None:
+            return None
+        expires_at, data = entry
+        if expires_at is not None and time.monotonic() >= expires_at:
+            del _round_cache[key]
+            return None
+        return data
+
+
+def _cache_put(key: tuple[int, int], data: dict, *, permanent: bool) -> None:
+    expires_at = None if permanent else time.monotonic() + INCOMPLETE_ROUND_CACHE_TTL_SECONDS
+    with _round_cache_lock:
+        _round_cache[key] = (expires_at, data)
+        # Bound memory: keep only the most recent rounds (a season is ~24).
+        while len(_round_cache) > ROUND_CACHE_MAX_ROUNDS:
+            del _round_cache[min(_round_cache)]
+
+
+def fetch_race_data(season: int, round_number: int) -> dict:
+    """Everything the summarizer needs for one round, cached.
+
+    Returns {"event": ..., "laps": [...], "pit_stops": [...]}. A round that
+    came back with lap data is complete and cached permanently; one without
+    laps yet (results published, timing data still to come) is cached only
+    briefly so the next visit picks up the full set.
+    """
+    key = (int(season), int(round_number))
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+
+    data = {
+        "event": fetch_race_event(season, round_number),
+        "laps": fetch_laps(season, round_number),
+        "pit_stops": fetch_pit_stops(season, round_number),
+    }
+    _cache_put(key, data, permanent=bool(data["laps"]))
+    return data
 
 
 def fetch_race_event(season: int, round_number: int) -> dict:

@@ -1,0 +1,6 @@
+# pnpm 11 reads build-script approvals from here; the `pnpm.onlyBuiltDependencies`
+# field in package.json (kept for pnpm 10) is ignored with a warning. Without
+# this, `pnpm run build` aborts with ERR_PNPM_IGNORED_BUILDS — esbuild needs its
+# postinstall to place its platform binary, and Vite can't build without it.
+allowBuilds:
+  esbuild: true
