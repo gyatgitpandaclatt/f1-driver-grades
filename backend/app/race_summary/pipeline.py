@@ -31,7 +31,8 @@ def _latest_completed_round(season: int) -> int:
 def run_race_summary_pipeline(season: int = SEASON) -> dict:
     round_number = _latest_completed_round(season)
 
-    event = ingestion.fetch_race_event(season, round_number)
+    race_data = ingestion.fetch_race_data(season, round_number)
+    event = race_data['event']
     race_name = event['raceName']
     results = event['Results']
 
@@ -52,8 +53,8 @@ def run_race_summary_pipeline(season: int = SEASON) -> dict:
         })
     final_classification.sort(key=lambda entry: entry['position'])
 
-    laps = ingestion.fetch_laps(season, round_number)
-    pit_stops_raw = ingestion.fetch_pit_stops(season, round_number)
+    laps = race_data['laps']
+    pit_stops_raw = race_data['pit_stops']
     total_laps = max((int(lap['number']) for lap in laps), default=0)
 
     position_matrix = features.build_position_matrix(laps, driver_id_to_code)

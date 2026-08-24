@@ -6,7 +6,7 @@ import json
 import anthropic
 from anthropic import Anthropic
 
-from ..config import ANTHROPIC_MODEL
+from ..config import ANTHROPIC_MODEL, NARRATIVE_TIMEOUT_SECONDS
 from ..exceptions import NarrativeGenerationError
 
 SYSTEM_PROMPT = """You are a professional Formula 1 race analyst and journalist.
@@ -80,17 +80,30 @@ def generate_narrative(context: dict) -> dict:
     # ANTHROPIC_API_KEY surfaces as a clear NarrativeGenerationError on the
     # first request instead of crashing the whole race_summary import chain
     # at startup with an unrelated-looking error.
-    client = Anthropic()
+    client = Anthropic(timeout=NARRATIVE_TIMEOUT_SECONDS)
     user_prompt = _build_user_prompt(context)
     try:
-        response = client.messages.create(
+        # Streamed, not a single blocking POST: a full race report is a
+        # minutes-long generation, and a non-streaming request that long is
+        # what hosting proxies cut off — the connection dies mid-flight and
+        # the browser gets a non-JSON error page instead of a report.
+        # Streaming keeps bytes flowing; get_final_message() still hands back
+        # the assembled response, so nothing downstream changes.
+        #
+        # effort=medium: the report is a rewrite of structured data we've
+        # already computed (classification, stops, overtakes, battles), not
+        # open-ended analysis, so the default (high) buys latency we don't
+        # need here. Raise it if the narratives get thin.
+        with client.messages.stream(
             model=ANTHROPIC_MODEL,
             max_tokens=8000,
             system=SYSTEM_PROMPT,
+            output_config={"effort": "medium"},
             tools=[_SECTION_TOOL],
             tool_choice={"type": "tool", "name": "submit_race_report"},
             messages=[{"role": "user", "content": user_prompt}],
-        )
+        ) as stream:
+            response = stream.get_final_message()
     except anthropic.APIConnectionError as exc:
         raise NarrativeGenerationError(f"Could not reach the Claude API: {exc}") from exc
     except anthropic.APIStatusError as exc:

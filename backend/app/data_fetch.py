@@ -1,17 +1,84 @@
+import logging
+import threading
+import time
+
 import requests
 import pandas as pd
 
-from .config import API_BASE_URL, PAGE_LIMIT, REQUEST_TIMEOUT
-from .exceptions import UpstreamAPIError
+from .config import (
+    API_BASE_URL,
+    DEFAULT_RETRY_AFTER_SECONDS,
+    MAX_UPSTREAM_RETRIES,
+    PAGE_LIMIT,
+    REQUEST_TIMEOUT,
+    UPSTREAM_BACKOFF_BASE_SECONDS,
+    UPSTREAM_MAX_CONCURRENCY,
+)
+from .exceptions import UpstreamAPIError, UpstreamRateLimitedError
+
+logger = logging.getLogger("f1_driver_grades")
+
+# One pooled session for every upstream call: the pipelines fire a run of
+# sequential requests against a single host, so reusing the TCP/TLS
+# connection removes a full handshake per page.
+_session = requests.Session()
+
+# Requests run in FastAPI's threadpool, so several can be in flight at once
+# (e.g. a driver-grades warm and a race-summary build). Cap the concurrency
+# we aim at the provider so we stay under its burst limit.
+_concurrency = threading.Semaphore(UPSTREAM_MAX_CONCURRENCY)
+
+
+def _retry_after_seconds(response: requests.Response) -> int:
+    raw = response.headers.get("Retry-After", "")
+    try:
+        return max(1, int(float(raw)))
+    except (TypeError, ValueError):
+        return DEFAULT_RETRY_AFTER_SECONDS
 
 
 def _get_json(url: str) -> dict:
-    try:
-        r = requests.get(url, timeout=REQUEST_TIMEOUT)
-        r.raise_for_status()
-        return r.json()
-    except (requests.RequestException, ValueError) as exc:
-        raise UpstreamAPIError(f"Failed to fetch {url}: {exc}") from exc
+    """GET a JSON payload, retrying transient upstream failures.
+
+    429s and 5xx are retried with exponential backoff (honouring Retry-After
+    when the provider sends one). A 429 that outlives the retries raises
+    UpstreamRateLimitedError so the API edge can answer 503 + Retry-After
+    rather than a misleading 502.
+    """
+    last_exc: Exception | None = None
+
+    for attempt in range(MAX_UPSTREAM_RETRIES + 1):
+        is_last = attempt == MAX_UPSTREAM_RETRIES
+        try:
+            with _concurrency:
+                r = _session.get(url, timeout=REQUEST_TIMEOUT)
+
+            if r.status_code == 429:
+                retry_after = _retry_after_seconds(r)
+                if is_last:
+                    raise UpstreamRateLimitedError(
+                        f"Rate limited by the F1 data provider on {url}.",
+                        retry_after=retry_after,
+                    )
+                logger.info("429 from %s; retrying in %ss", url, retry_after)
+                time.sleep(retry_after)
+                continue
+
+            if r.status_code >= 500 and not is_last:
+                delay = UPSTREAM_BACKOFF_BASE_SECONDS * (2 ** attempt)
+                logger.info("%s from %s; retrying in %ss", r.status_code, url, delay)
+                time.sleep(delay)
+                continue
+
+            r.raise_for_status()
+            return r.json()
+        except (requests.RequestException, ValueError) as exc:
+            last_exc = exc
+            if is_last:
+                break
+            time.sleep(UPSTREAM_BACKOFF_BASE_SECONDS * (2 ** attempt))
+
+    raise UpstreamAPIError(f"Failed to fetch {url}: {last_exc}") from last_exc
 
 
 def _paginate_races(endpoint: str, season: int):

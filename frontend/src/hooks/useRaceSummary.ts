@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchRaceSummary, refreshRaceSummary } from "../api/client";
+import { useAutoRetry } from "./useAutoRetry";
 import type { RaceSummaryChartData, RaceSummaryContext, RaceSummarySections } from "../api/types";
 
-export type UIStatus = "loading" | "ok" | "error" | "no_data";
+export type UIStatus = "loading" | "ok" | "error" | "no_data" | "busy";
 
 interface State {
   status: UIStatus;
@@ -35,11 +36,17 @@ export function useRaceSummary() {
   const [state, setState] = useState<State>(initialState);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const retryRef = useRef<((seconds: number) => void) | null>(null);
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, status: "loading" }));
     try {
       const result = await fetchRaceSummary();
+      if (result.status === "busy") {
+        setState((s) => ({ ...s, status: "busy", message: result.message }));
+        retryRef.current?.(result.retry_after);
+        return;
+      }
       if (result.status === "ok") {
         setState({
           status: "ok",
@@ -65,6 +72,15 @@ export function useRaceSummary() {
     setRefreshError(null);
     try {
       const result = await refreshRaceSummary();
+      if (result.status === "busy") {
+        if (state.status !== "ok") {
+          setState((s) => ({ ...s, status: "busy", message: result.message }));
+        } else {
+          setRefreshError(result.message);
+        }
+        retryRef.current?.(result.retry_after);
+        return;
+      }
       if (result.status === "ok") {
         setState({
           status: "ok",
@@ -93,9 +109,16 @@ export function useRaceSummary() {
     }
   }, [state.status]);
 
+  const { schedule, cancel } = useAutoRetry(load);
+
+  useEffect(() => {
+    retryRef.current = schedule;
+  }, [schedule]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    return cancel;
+  }, [load, cancel]);
 
   return { ...state, refresh, refreshing, refreshError };
 }
