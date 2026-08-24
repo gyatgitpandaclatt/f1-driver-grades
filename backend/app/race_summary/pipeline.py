@@ -102,8 +102,12 @@ def run_race_summary_pipeline(season: int = SEASON) -> dict:
     lap_times_df = features.build_lap_times(laps, driver_id_to_code)
     pit_stops_df = features.extract_pit_stops(pit_stops_raw, driver_id_to_code)
 
-    overtakes_df = events.detect_overtakes(position_matrix)
-    battles = events.find_battles(lap_times_df)
+    pit_laps_by_driver: dict[str, set[int]] = {}
+    for _, stop in pit_stops_df.iterrows():
+        pit_laps_by_driver.setdefault(stop['Driver'], set()).add(int(stop['LapNumber']))
+
+    overtakes_df = events.detect_overtakes(position_matrix, pit_laps_by_driver)
+    battles = events.find_battles(lap_times_df, position_matrix)
 
     context = {
         'race_name': race_name,
