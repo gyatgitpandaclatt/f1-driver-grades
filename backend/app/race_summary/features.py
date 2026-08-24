@@ -41,7 +41,10 @@ def build_lap_times(laps: list[dict], driver_id_to_code: dict[str, str]) -> pd.D
                 "LapNumber": lap_number,
                 "LapTime": _parse_ergast_time(timing["time"]),
             })
-    return pd.DataFrame(rows)
+    # One row per driver per lap. A repeated timing row (an overlapping page
+    # from the provider) would otherwise give a driver a duplicated index and
+    # make the pairwise gap computation in find_battles raise.
+    return pd.DataFrame(rows).drop_duplicates(subset=["Driver", "LapNumber"], keep="first")
 
 
 def extract_pit_stops(pit_stops: list[dict], driver_id_to_code: dict[str, str]) -> pd.DataFrame:
