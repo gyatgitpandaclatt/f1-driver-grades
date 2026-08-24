@@ -51,6 +51,19 @@ def _cache_put(key: tuple[int, int], data: dict, *, permanent: bool) -> None:
             del _round_cache[min(_round_cache)]
 
 
+def _laps_look_complete(laps: list[dict]) -> bool:
+    """Whether a round's lap data is a full, gapless 1..N run.
+
+    Guards the permanent cache: a truncated fetch (a page that came back
+    short, a partially published race) must not be stored forever, and a gap
+    also breaks lap-over-lap comparisons downstream.
+    """
+    if not laps:
+        return False
+    numbers = sorted(int(lap["number"]) for lap in laps)
+    return numbers == list(range(1, numbers[-1] + 1))
+
+
 def fetch_race_data(season: int, round_number: int) -> dict:
     """Everything the summarizer needs for one round, cached.
 
@@ -69,7 +82,7 @@ def fetch_race_data(season: int, round_number: int) -> dict:
         "laps": fetch_laps(season, round_number),
         "pit_stops": fetch_pit_stops(season, round_number),
     }
-    _cache_put(key, data, permanent=bool(data["laps"]))
+    _cache_put(key, data, permanent=_laps_look_complete(data["laps"]))
     return data
 
 
@@ -105,6 +118,8 @@ def fetch_laps(season: int, round_number: int) -> list[dict]:
     not concatenated.
     """
     laps_by_number: dict[int, list[dict]] = {}
+    collected = 0
+    expected: int | None = None
     offset = 0
     while True:
         url = f"{API_BASE_URL}/{season}/{round_number}/laps.json?limit={PAGE_LIMIT}&offset={offset}"
@@ -116,15 +131,35 @@ def fetch_laps(season: int, round_number: int) -> list[dict]:
         except (KeyError, ValueError) as exc:
             raise UpstreamAPIError(f"Unexpected response shape from {url}: {exc}") from exc
 
+        expected = total
         if not races:
             break
+        received = 0
         for lap in races[0]["Laps"]:
             lap_number = int(lap["number"])
-            laps_by_number.setdefault(lap_number, []).extend(lap["Timings"])
+            timings = lap["Timings"]
+            laps_by_number.setdefault(lap_number, []).extend(timings)
+            received += len(timings)
+        collected += received
 
-        offset += PAGE_LIMIT
+        # Advance by what came back, never by what we asked for: the provider
+        # caps `limit` at its own maximum and silently returns a smaller page,
+        # so striding by PAGE_LIMIT would skip every row in between.
+        if received == 0:
+            break
+        offset += received
         if offset >= total:
             break
+
+    # A run that ends with fewer rows than the provider said exist is a
+    # truncated fetch, not a short race. Fail rather than return it: the
+    # caller would otherwise cache the partial result permanently, and a
+    # missing stretch of laps silently distorts every downstream metric.
+    if expected is not None and collected < expected:
+        raise UpstreamAPIError(
+            f"Incomplete lap data for {season} round {round_number}: "
+            f"got {collected} of {expected} timing rows."
+        )
 
     return [
         {"number": str(number), "Timings": timings}
@@ -152,9 +187,12 @@ def fetch_pit_stops(season: int, round_number: int) -> list[dict]:
 
         if not races:
             break
-        all_stops.extend(races[0]["PitStops"])
+        stops = races[0]["PitStops"]
+        all_stops.extend(stops)
 
-        offset += PAGE_LIMIT
+        if not stops:  # see fetch_laps: stride by rows received, not requested
+            break
+        offset += len(stops)
         if offset >= total:
             break
 
