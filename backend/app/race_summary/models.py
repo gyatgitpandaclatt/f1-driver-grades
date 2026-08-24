@@ -10,6 +10,13 @@ class FinalClassificationEntry(BaseModel):
     status: str  # "Finished", "+1 Lap", "Retired", "Accident", "Engine", ...
 
 
+class RetirementOut(BaseModel):
+    driver_code: str
+    constructor: str
+    status: str  # cause as recorded by the results feed: "Collision", "Engine", ...
+    laps_completed: int
+
+
 class OvertakeOut(BaseModel):
     lap: int
     overtaking_driver: str
@@ -49,6 +56,9 @@ class RaceSummaryContext(BaseModel):
     round: int
     total_laps: int
     final_classification: List[FinalClassificationEntry]
+    # Everyone who did not go the distance. Absent from final_classification,
+    # which by definition only holds classified runners.
+    retirements: List[RetirementOut] = []
     pit_stops: List[PitStopOut]
     overtakes: List[OvertakeOut]
     battles: List[BattleOut]

@@ -21,6 +21,12 @@ periods — do not mention, guess at, or imply any of these (e.g. don't say a
 stop was "onto softs" or a gap opened up "under the safety car"). Ground pit
 stop analysis in lap number and stop duration only.
 
+"Retirements" is the complete list of drivers who did not finish, with the
+cause recorded by the results feed and the number of laps they completed.
+"Final Classification" holds classified runners only, so never infer the
+retirements from it or describe a classified driver as the race's only
+retirement.
+
 Any "Lineup Notes" in the race data are verified facts about who drove which
 car and why, supplied because the results feed does not carry that context.
 Work them into the report where they matter to the story. Do not infer any
@@ -77,7 +83,8 @@ def _build_user_prompt(context: dict) -> str:
 Race: {context['race_name']}, {context['year']}
 Laps: {context['total_laps']}
 
-{lineup_section}Final Classification: {json.dumps(context['final_classification'], indent=2)}
+{lineup_section}Final Classification (classified runners only): {json.dumps(context['final_classification'], indent=2)}
+Retirements (did not finish; "status" is the recorded cause): {json.dumps(context.get('retirements', []), indent=2)}
 Pit Stops: {json.dumps(context['pit_stops'], indent=2)}
 Overtakes: {json.dumps(context['overtakes'], indent=2)}
 Battle Highlights: {json.dumps(context['battles'], indent=2)}

@@ -58,18 +58,36 @@ def run_race_summary_pipeline(season: int = SEASON) -> dict:
         for r in results
     }
 
+    # Ergast marks anyone who did not go the distance with a non-numeric
+    # positionText ("R", "W", "D", ...). Those entries used to be dropped on
+    # the floor, so the narrator only ever saw classified finishers and could
+    # not know who retired -- it would report the one classified driver whose
+    # status happened to read like a retirement as the race's only DNF.
     final_classification = []
+    retirements = []
     for r in results:
+        driver_id = r['Driver']['driverId']
         pos_text = r.get('positionText', '')
-        if not pos_text.lstrip('-').isdigit():
-            continue
-        final_classification.append({
-            'position': int(r['position']),
-            'driver_code': driver_id_to_code[r['Driver']['driverId']],
-            'constructor': driver_id_to_constructor[r['Driver']['driverId']],
-            'status': r['status'],
-        })
+        if pos_text.lstrip('-').isdigit():
+            final_classification.append({
+                'position': int(r['position']),
+                'driver_code': driver_id_to_code[driver_id],
+                'constructor': driver_id_to_constructor[driver_id],
+                'status': r['status'],
+            })
+        else:
+            retirements.append({
+                'driver_code': driver_id_to_code[driver_id],
+                'constructor': driver_id_to_constructor[driver_id],
+                # Ergast's status is the recorded cause: "Collision",
+                # "Engine", "Hydraulics", "Accident", ...
+                'status': r['status'],
+                'laps_completed': int(r.get('laps') or 0),
+            })
     final_classification.sort(key=lambda entry: entry['position'])
+    # Chronological: whoever stopped earliest first, which is the order a
+    # race report walks through them.
+    retirements.sort(key=lambda entry: entry['laps_completed'])
 
     lineup_notes = _applicable_lineup_notes({
         (code, driver_id_to_constructor[driver_id])
@@ -93,6 +111,7 @@ def run_race_summary_pipeline(season: int = SEASON) -> dict:
         'round': round_number,
         'total_laps': total_laps,
         'final_classification': final_classification,
+        'retirements': retirements,
         'pit_stops': [
             {
                 'driver': row['Driver'],
