@@ -125,6 +125,13 @@ export interface FinalClassificationEntry {
   status: string;
 }
 
+export interface Retirement {
+  driver_code: string;
+  constructor: string;
+  status: string;
+  laps_completed: number;
+}
+
 export interface Overtake {
   lap: number;
   overtaking_driver: string;
@@ -163,6 +170,7 @@ export interface RaceSummaryContext {
   round: number;
   total_laps: number;
   final_classification: FinalClassificationEntry[];
+  retirements: Retirement[];
   pit_stops: PitStop[];
   overtakes: Overtake[];
   battles: Battle[];
