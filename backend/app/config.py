@@ -50,6 +50,14 @@ UPSTREAM_BACKOFF_BASE_SECONDS = 1.0
 UPSTREAM_MAX_CONCURRENCY = 3
 DEFAULT_RETRY_AFTER_SECONDS = 30
 
+# Ceilings on a provider-supplied Retry-After. The provider controls that
+# header, so treat it as untrusted input: clamp what we pass on to the client,
+# and never block a request thread for longer than MAX_RETRY_SLEEP_SECONDS —
+# a longer wait is handed to the client as a 503 + Retry-After instead, which
+# is the whole point of answering 503 rather than sitting on the connection.
+MAX_RETRY_AFTER_SECONDS = 300
+MAX_RETRY_SLEEP_SECONDS = 30
+
 # Race summarizer (Jolpica/Ergast + Claude narrative) — a completed race's
 # data never changes, so this cache can be long-lived; recomputation costs an
 # LLM call, not just an API round trip.
