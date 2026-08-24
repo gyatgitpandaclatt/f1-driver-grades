@@ -9,8 +9,12 @@ def detect_overtakes(position_matrix: pd.DataFrame) -> pd.DataFrame:
     Detect overtakes by comparing the position of each driver on consecutive laps. An overtake is detected when a driver moves up in position from one lap to the next.
     """
     overtakes = []
-    for lap in range(2, len(position_matrix)):
-        prev = position_matrix.loc[lap - 1]
+    # Walk the index itself rather than range(2, len(matrix)): lap numbers are
+    # labels, not row offsets. Treating them as offsets crashed on any gap in
+    # the lap data, and silently dropped the final lap even without one.
+    laps = list(position_matrix.index)
+    for prev_lap, lap in zip(laps, laps[1:]):
+        prev = position_matrix.loc[prev_lap]
         current = position_matrix.loc[lap]
         for d1 in position_matrix.columns:
             for d2 in position_matrix.columns:

@@ -114,6 +114,10 @@ def _get_json(url: str) -> dict:
     raise UpstreamAPIError(f"Failed to fetch {url}: {last_exc}") from last_exc
 
 
+# The per-race list key varies by endpoint; a race payload carries exactly one.
+RESULT_KEYS = ("Results", "QualifyingResults")
+
+
 def _paginate_races(endpoint: str, season: int):
     offset = 0
     all_races = []
@@ -129,7 +133,13 @@ def _paginate_races(endpoint: str, season: int):
 
         all_races.extend(races)
 
-        offset += PAGE_LIMIT
+        # `total` counts result rows, not races, so stride by the rows this
+        # page actually returned — the provider may cap `limit` below what we
+        # asked for, and striding by PAGE_LIMIT would skip the difference.
+        received = sum(len(race.get(key, [])) for race in races for key in RESULT_KEYS)
+        if received == 0:
+            break
+        offset += received
         if offset >= total:
             break
     return all_races
