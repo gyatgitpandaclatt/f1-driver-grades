@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef } from "react";
+import type { RefObject } from "react";
 
 /**
  * The backend answers 503 + Retry-After when the upstream F1 provider rate
  * limits it (see main.py's UpstreamRateLimitedError handler). That clears on
  * its own, so wait out the provider's own delay and reload rather than making
  * the visitor press Retry on something that is merely busy.
+ *
+ * Takes a ref to the loader rather than the loader itself so callers can
+ * `cancel()` from inside their own load function without a dependency cycle.
  */
-export function useAutoRetry(load: () => void) {
+export function useAutoRetry(loadRef: RefObject<(() => void) | null>) {
   const timer = useRef<number | null>(null);
   const mounted = useRef(true);
 
@@ -26,10 +30,10 @@ export function useAutoRetry(load: () => void) {
       cancel();
       timer.current = window.setTimeout(() => {
         timer.current = null;
-        load();
+        loadRef.current?.();
       }, Math.max(1, retryAfterSeconds) * 1000);
     },
-    [cancel, load],
+    [cancel, loadRef],
   );
 
   useEffect(() => {
