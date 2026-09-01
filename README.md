@@ -57,24 +57,27 @@ Nix channel in `.replit`/`replit.nix` is stale by the time you read this,
 Replit will prompt you to fix it, or you can just delete both files and let
 Replit auto-detect Python + Node.js instead.
 
-## Deploying to Koyeb
+## Deploying to Google Cloud Run
 
-The app deploys as a single Docker web service — Docker is used because the
-image needs both Node (to build the frontend) and Python (to run the
-backend). The `Dockerfile` does the same two steps as `start.sh`: build
-`frontend/dist`, then run uvicorn.
+The app deploys as a single container — Docker is used because the image
+needs both Node (to build the frontend) and Python (to run the backend).
+The `Dockerfile` does the same two steps as `start.sh`: build
+`frontend/dist`, then run uvicorn on whatever `PORT` Cloud Run injects
+(8080 by default).
 
 1. Push this repo to GitHub (if not already).
-2. In the Koyeb dashboard: **Create Web Service > GitHub**, pick this repo
-   and the `master` branch. Under Builder choose **Dockerfile** (Koyeb
-   auto-detects it).
-3. Under Environment variables add `ANTHROPIC_API_KEY` as a **Secret** with
-   the real value — same as `backend/.env` does locally; it is never
-   committed to the repo.
-4. Leave the exposed port at **8000** (the Dockerfile's default) and set the
-   health check to HTTP path `/api/health`.
-5. Pick the **Free** instance and deploy. Koyeb builds the image and
-   redeploys automatically on every push to `master`.
+2. In the Cloud Run console: **Create service > Continuously deploy from a
+   repository**, connect GitHub and pick this repo. Build type: Dockerfile.
+3. Set the trigger's branch pattern to `^master$` — the default is `^main$`,
+   which matches nothing in this repo, so the first deploy never starts.
+4. Under Variables & Secrets add `ANTHROPIC_API_KEY` (a Secret Manager
+   secret or a plain env var) — same value as `backend/.env` locally; it is
+   never committed to the repo.
+5. Memory: 1 GiB is a safe floor for pandas + scikit-learn. Leave min
+   instances at 0 so the service scales to zero and stays inside the free
+   tier.
+6. Create. Cloud Build builds the image and redeploys on every push to
+   `master`.
 
 No frontend code changes are needed for this move: the frontend only ever
 calls relative paths like `/api/driver-grades` (see `frontend/src/api/client.ts`),
