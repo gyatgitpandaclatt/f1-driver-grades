@@ -8,11 +8,13 @@ and predicted-vs-actual charts.
 
 - **Python**: this machine only has Python reachable via the `py` launcher.
   Plain `python` resolves to a broken Windows Store stub — always use `py`.
-- **Node.js**: not installed on this machine. Install the LTS build from
-  https://nodejs.org before doing any frontend work, then verify with:
+- **Node.js**: not installed on this machine. Install the LTS build (22+)
+  from https://nodejs.org before doing any frontend work, then enable pnpm
+  (bundled with Node via corepack) and verify with:
   ```
+  corepack enable
   node --version
-  npm --version
+  pnpm --version
   ```
 
 ## Backend
@@ -32,8 +34,8 @@ API docs: http://localhost:8000/docs
 
 ```
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 App: http://localhost:5173 (proxies `/api/*` to the backend on :8000 — see `vite.config.ts`)
@@ -44,7 +46,7 @@ The backend can serve the built frontend directly, so the whole app is one
 process on one port — no separate frontend server needed:
 
 ```
-cd frontend && npm install && npm run build && cd ..
+cd frontend && pnpm install && pnpm run build && cd ..
 cd backend && py -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 

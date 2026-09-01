@@ -4,10 +4,11 @@
 
 FROM node:22-slim AS frontend-build
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
-RUN npm run build
+RUN pnpm run build
 
 FROM python:3.12-slim
 WORKDIR /app
