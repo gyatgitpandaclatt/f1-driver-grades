@@ -55,23 +55,24 @@ Nix channel in `.replit`/`replit.nix` is stale by the time you read this,
 Replit will prompt you to fix it, or you can just delete both files and let
 Replit auto-detect Python + Node.js instead.
 
-## Deploying to Render
+## Deploying to Koyeb
 
-The app is set up to deploy as a single Docker web service via `render.yaml`
-(a Render "Blueprint") — Docker is used because the image needs both Node
-(to build the frontend) and Python (to run the backend); Render's native
-Python runtime doesn't include Node. The `Dockerfile` does the same two
-steps as `start.sh`: build `frontend/dist`, then run uvicorn.
+The app deploys as a single Docker web service — Docker is used because the
+image needs both Node (to build the frontend) and Python (to run the
+backend). The `Dockerfile` does the same two steps as `start.sh`: build
+`frontend/dist`, then run uvicorn.
 
 1. Push this repo to GitHub (if not already).
-2. In the Render dashboard: **New > Blueprint**, point it at the repo.
-   Render reads `render.yaml` and creates the web service automatically.
-3. Set the `ANTHROPIC_API_KEY` env var on the service (Render dashboard >
-   service > Environment) — it's marked `sync: false` in `render.yaml` so
-   it isn't committed to the repo; you enter the real value in the
-   dashboard, same as `backend/.env` does locally.
-4. Render builds the Docker image and starts the service; `/api/health` is
-   used as the health check path.
+2. In the Koyeb dashboard: **Create Web Service > GitHub**, pick this repo
+   and the `master` branch. Under Builder choose **Dockerfile** (Koyeb
+   auto-detects it).
+3. Under Environment variables add `ANTHROPIC_API_KEY` as a **Secret** with
+   the real value — same as `backend/.env` does locally; it is never
+   committed to the repo.
+4. Leave the exposed port at **8000** (the Dockerfile's default) and set the
+   health check to HTTP path `/api/health`.
+5. Pick the **Free** instance and deploy. Koyeb builds the image and
+   redeploys automatically on every push to `master`.
 
 No frontend code changes are needed for this move: the frontend only ever
 calls relative paths like `/api/driver-grades` (see `frontend/src/api/client.ts`),
