@@ -23,6 +23,16 @@ from .schemas import DriverGradesResponse
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
+# Uvicorn configures its own loggers and leaves the root logger alone, so
+# without this our INFO records go nowhere (WARNING and above still reach
+# stderr via logging's last-resort handler). Boot progress is INFO, and a
+# silent boot is what made the startup warm impossible to diagnose.
+# basicConfig is a no-op if something upstream already configured the root.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
 logger = logging.getLogger("f1_driver_grades")
 
 app = FastAPI(title="F1 Driver Grades API")
@@ -111,8 +121,10 @@ def _warm_caches() -> None:
     # which is the slow one: a run of upstream pages plus a Claude call. Warm
     # it here so the first visitor to /race-summary reads a cache instead of
     # waiting out the whole pipeline.
+    logger.info("Startup warm beginning for season %s", SEASON)
     cache.try_warm_cache(SEASON)
     race_summary_cache.try_warm_cache(SEASON)
+    logger.info("Startup warm done")
 
 
 @app.on_event("startup")

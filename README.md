@@ -79,6 +79,32 @@ The `Dockerfile` does the same two steps as `start.sh`: build
 6. Create. Cloud Build builds the image and redeploys on every push to
    `master`.
 
+### Two Cloud Run settings the startup warm depends on
+
+The backend warms both caches in a background thread at startup (see
+`_warm_caches` in `backend/app/main.py`), so the first visitor to
+`/race-summary` reads a cache instead of waiting out a run of upstream
+requests plus a Claude call. On Cloud Run's defaults that warm does not
+work, for two separate reasons:
+
+- **CPU is allocated only during request processing by default.** The warm
+  thread starts *after* the startup handler returns, so it is throttled to
+  almost no CPU and either crawls or times out. Set **CPU allocation** to
+  "CPU is always allocated" for the warm to run to completion. The warm
+  logs `Startup warm of race summary finished in Ns` or a warning saying
+  why it failed — check the logs after a deploy to see which happened.
+- **Scale to zero means every cold start warms again.** The caches are
+  per-instance and in-memory, so with `min-instances: 0` a low-traffic
+  service pays a fresh narrative (one Claude call) on most visits, and the
+  6h cache rarely gets used. Either accept that cost, or set
+  `min-instances: 1` so one warm instance stays up and the cache survives
+  between visits. Note that both of these settings mean paying for an idle
+  instance, which takes the service outside the always-free tier.
+
+If you would rather stay scaled to zero, leave both at their defaults and
+accept that `/race-summary` is slow on a cold start — it is correct either
+way, just not pre-warmed.
+
 No frontend code changes are needed for this move: the frontend only ever
 calls relative paths like `/api/driver-grades` (see `frontend/src/api/client.ts`),
 so it works unmodified on whatever host/domain serves it, same as it does

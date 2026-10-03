@@ -2,7 +2,7 @@ from .cache_base import TTLCache
 from .config import CACHE_TTL_SECONDS, SEASON
 from .pipeline import run_pipeline
 
-_cache = TTLCache(run_pipeline, CACHE_TTL_SECONDS)
+_cache = TTLCache(run_pipeline, CACHE_TTL_SECONDS, name="driver grades")
 
 
 def get_or_compute(season: int = SEASON) -> dict:
