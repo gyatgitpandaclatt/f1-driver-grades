@@ -12,6 +12,7 @@ from . import cache
 from .config import SEASON
 from .exceptions import (
     NarrativeGenerationError,
+    NarrativeUnavailableError,
     NoRaceDataError,
     RaceSessionNotAvailableError,
     UpstreamAPIError,
@@ -95,6 +96,22 @@ async def race_session_not_available_handler(request: Request, exc: RaceSessionN
         "status": "no_data",
         "season": SEASON,
         "message": str(exc),
+    })
+
+
+@app.exception_handler(NarrativeUnavailableError)
+async def narrative_unavailable_handler(request: Request, exc: NarrativeUnavailableError):
+    # Registered before the NarrativeGenerationError handler it subclasses.
+    # The reason (credit balance, rejected key) is for the logs, not the page:
+    # a visitor can do nothing with it, and it describes the operator's
+    # account. What the page needs to convey is that waiting will not help.
+    logger.error("Narrative unavailable (needs attention, not a retry): %s", exc)
+    return JSONResponse(status_code=503, content={
+        "status": "unavailable",
+        "message": (
+            "The race narrative is unavailable right now. This one needs "
+            "attention from the site owner — retrying will not bring it back."
+        ),
     })
 
 

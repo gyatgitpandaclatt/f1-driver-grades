@@ -11,7 +11,23 @@ class RaceSessionNotAvailableError(Exception):
 
 
 class NarrativeGenerationError(Exception):
-    """Raised when the Claude narrative call fails or is declined."""
+    """Raised when the Claude narrative call fails transiently.
+
+    The caller is invited to retry: the API was unreachable, overloaded, or
+    rate limited.
+    """
+
+
+class NarrativeUnavailableError(NarrativeGenerationError):
+    """Raised when the narrative call fails for a reason retrying cannot fix.
+
+    An exhausted credit balance, a rejected or missing API key, a request the
+    API refuses outright. These need someone to change an account or a
+    configuration; telling a visitor to "try again shortly" is simply false,
+    and the frontend's auto-retry would hammer a call that cannot succeed.
+
+    Subclasses NarrativeGenerationError so existing handling still catches it.
+    """
 
 
 class UpstreamRateLimitedError(UpstreamAPIError):

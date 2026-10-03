@@ -31,6 +31,16 @@ export default function StatusBanner({ status, message, onRetry, loadingMessage 
     );
   }
 
+  if (status === "unavailable") {
+    // No retry control: the backend has told us this will not come back on
+    // its own, and a button that cannot work is worse than no button.
+    return (
+      <div className="status-banner error">
+        {message ?? "This section is unavailable right now."}
+      </div>
+    );
+  }
+
   if (status === "error") {
     return (
       <div className="status-banner error">
