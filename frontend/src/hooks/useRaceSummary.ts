@@ -3,7 +3,7 @@ import { fetchRaceSummary, refreshRaceSummary } from "../api/client";
 import { useAutoRetry } from "./useAutoRetry";
 import type { RaceSummaryChartData, RaceSummaryContext, RaceSummarySections } from "../api/types";
 
-export type UIStatus = "loading" | "ok" | "error" | "no_data" | "busy";
+export type UIStatus = "loading" | "ok" | "error" | "no_data" | "busy" | "unavailable";
 
 interface State {
   status: UIStatus;

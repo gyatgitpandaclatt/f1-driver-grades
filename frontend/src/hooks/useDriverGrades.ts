@@ -3,7 +3,7 @@ import { fetchDriverGrades, refreshDriverGrades } from "../api/client";
 import { useAutoRetry } from "./useAutoRetry";
 import type { DriverGrade, Meta } from "../api/types";
 
-export type UIStatus = "loading" | "ok" | "error" | "no_data" | "busy";
+export type UIStatus = "loading" | "ok" | "error" | "no_data" | "busy" | "unavailable";
 
 interface State {
   status: UIStatus;

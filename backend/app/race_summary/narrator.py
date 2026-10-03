@@ -7,7 +7,7 @@ import anthropic
 from anthropic import Anthropic
 
 from ..config import ANTHROPIC_MODEL, NARRATIVE_TIMEOUT_SECONDS
-from ..exceptions import NarrativeGenerationError
+from ..exceptions import NarrativeGenerationError, NarrativeUnavailableError
 
 SYSTEM_PROMPT = """You are a professional Formula 1 race analyst and journalist.
 Given structured race data, write a detailed, engaging race report in the style of
@@ -93,6 +93,15 @@ Write a full race report and submit it via the submit_race_report tool.
 """
 
 
+# 4xx the API will keep rejecting however many times we ask. 408/409/429 are
+# the retryable exceptions to that: timeout, conflict, rate limit.
+_RETRYABLE_CLIENT_ERRORS = {408, 409, 429}
+
+
+def _is_permanent(status_code: int) -> bool:
+    return 400 <= status_code < 500 and status_code not in _RETRYABLE_CLIENT_ERRORS
+
+
 def generate_narrative(context: dict) -> dict:
     # Constructed lazily (rather than at module import time) so a missing
     # ANTHROPIC_API_KEY surfaces as a clear NarrativeGenerationError on the
@@ -125,6 +134,11 @@ def generate_narrative(context: dict) -> dict:
     except anthropic.APIConnectionError as exc:
         raise NarrativeGenerationError(f"Could not reach the Claude API: {exc}") from exc
     except anthropic.APIStatusError as exc:
+        # An exhausted credit balance arrives here as a 400
+        # invalid_request_error, a rejected key as a 401 — neither improves by
+        # asking again.
+        if _is_permanent(exc.status_code):
+            raise NarrativeUnavailableError(f"Claude API error: {exc}") from exc
         raise NarrativeGenerationError(f"Claude API error: {exc}") from exc
     except TypeError as exc:
         # With no credentials configured anywhere (no ANTHROPIC_API_KEY, no
@@ -133,12 +147,13 @@ def generate_narrative(context: dict) -> dict:
         # TypeError from _validate_headers, not an anthropic.* exception.
         if "authentication" not in str(exc).lower():
             raise
-        raise NarrativeGenerationError(
+        raise NarrativeUnavailableError(
             "ANTHROPIC_API_KEY is not configured in this environment."
         ) from exc
 
     if response.stop_reason == "refusal":
-        raise NarrativeGenerationError("The narrative generator declined to write this report.")
+        # A refusal of this input will be refused again.
+        raise NarrativeUnavailableError("The narrative generator declined to write this report.")
 
     tool_use = next((block for block in response.content if block.type == "tool_use"), None)
     if tool_use is None:

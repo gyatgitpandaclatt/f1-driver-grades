@@ -100,6 +100,14 @@ export interface ErrorResponse {
   message: string;
 }
 
+// HTTP 503 with status "unavailable" — the narrative cannot be generated for
+// a reason retrying will not fix (credit balance, rejected key). Distinct from
+// "busy", which clears on its own.
+export interface UnavailableResponse {
+  status: "unavailable";
+  message: string;
+}
+
 // HTTP 503 — the upstream F1 provider is rate limiting us. Distinct from
 // "error" because it is expected to clear on its own; `retry_after` is the
 // provider's own Retry-After, in seconds.
@@ -113,6 +121,7 @@ export type DriverGradesApiResult =
   | DriverGradesResponse
   | NoDataResponse
   | BusyResponse
+  | UnavailableResponse
   | ErrorResponse;
 
 // --- Race Summary ---
@@ -194,4 +203,5 @@ export type RaceSummaryApiResult =
   | RaceSummaryResponse
   | NoDataResponse
   | BusyResponse
+  | UnavailableResponse
   | ErrorResponse;
