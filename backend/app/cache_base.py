@@ -7,14 +7,18 @@ else waits for its result. Without that, a single page load fired two full
 pipelines — React StrictMode mounts effects twice in dev, so the frontend
 issues two identical requests, and each used to miss the cache independently.
 """
+import logging
 import threading
 import time
 from typing import Callable
 
+logger = logging.getLogger("f1_driver_grades")
+
 
 class TTLCache:
-    def __init__(self, compute: Callable[[int], dict], ttl_seconds: float):
+    def __init__(self, compute: Callable[[int], dict], ttl_seconds: float, name: str = "cache"):
         self._compute = compute
+        self._name = name
         self._ttl = ttl_seconds
         self._state_lock = threading.Lock()
         self._compute_lock = threading.Lock()
@@ -60,9 +64,23 @@ class TTLCache:
         return self._compute_and_store(season, newer_than=time.monotonic())
 
     def try_warm(self, season: int) -> None:
-        """Best-effort warm for startup — swallow errors so the app still
-        boots if the upstream API or the narrative call is briefly failing."""
+        """Best-effort warm for startup: the app must still boot if the
+        upstream API or the narrative call is failing.
+
+        Swallowing the error is deliberate; swallowing it *silently* was a
+        mistake. A warm that fails leaves the cache empty, so the first
+        visitor pays the full pipeline — the exact symptom the warm exists to
+        remove — and with no log line there was nothing to distinguish "the
+        warm failed" from "the warm was never reached". Log it.
+        """
+        started = time.monotonic()
         try:
             self.get_or_compute(season)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Startup warm of %s failed after %.1fs (%s: %s). The cache is "
+                "empty, so the first request will compute it instead.",
+                self._name, time.monotonic() - started, type(exc).__name__, exc,
+            )
+            return
+        logger.info("Startup warm of %s finished in %.1fs", self._name, time.monotonic() - started)
