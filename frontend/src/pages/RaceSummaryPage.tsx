@@ -28,7 +28,7 @@ export default function RaceSummaryPage() {
           status={status}
           message={message}
           onRetry={refresh}
-          loadingMessage="Loading race summary… this can take a moment while the narrative is written."
+          loadingMessage="Loading race summary… this can take a moment while Gemini writes the narrative."
         />
       </div>
     );
