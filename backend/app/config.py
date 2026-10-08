@@ -5,10 +5,15 @@ SEASON = 2026
 # Driver codes for drivers in their first full F1 season this year.
 ROOKIES = {"LIN"}
 
-# Drivers with fewer completed races than this are left out of the grades.
-# A one-off stand-in has nowhere near enough data for a season grade, and
-# their volatile per-race numbers would skew both the model and the score
-# normalisation for everyone else.
+# Drivers who started fewer than this share of the season's completed rounds
+# are left out of the grades, and never anyone with fewer than
+# MIN_RACES_FOR_GRADE. A stand-in has nowhere near enough data for a season
+# grade, and their volatile per-race numbers would skew both the model and
+# the score normalisation for everyone else. The bar is a share rather than a
+# fixed count because a fixed count stops working as the season goes on: by
+# mid-season a reserve who filled in for two races clears a bar of two and is
+# graded on a tenth of everyone else's sample.
+MIN_RACE_SHARE_FOR_GRADE = 0.5
 MIN_RACES_FOR_GRADE = 2
 
 # Lower tier number = stronger car. Unlisted constructors default to

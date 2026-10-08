@@ -1,10 +1,6 @@
 import { GRADE_ORDER } from "../theme/theme";
 import { useLayoutData } from "../layout/useLayoutData";
 
-// Keep in sync with MIN_RACES_FOR_GRADE in backend/app/config.py, which is
-// what actually filters the table; this is only used to describe the rule.
-const MIN_RACES_FOR_GRADE = 2;
-
 const GRADE_LABELS: Record<string, string> = {
   S: "Elite",
   A: "Top tier",
@@ -40,8 +36,17 @@ export default function MethodologyPage() {
     seasonLabelCounts[d.season_label] = (seasonLabelCounts[d.season_label] ?? 0) + 1;
   }
 
-  const { performance_label_distribution: raceDist, total_race_entries: totalRaces } = meta;
-  const avgRacesPerDriver = drivers.length > 0 ? (totalRaces / drivers.length).toFixed(1) : "0";
+  const {
+    performance_label_distribution: raceDist,
+    total_race_entries: totalRaces,
+    min_races_for_grade: minRaces,
+  } = meta;
+  // From the graded drivers' own counts: totalRaces also holds the entries of
+  // drivers below the minimum race count, who are not in `drivers`.
+  const avgRacesPerDriver =
+    drivers.length > 0
+      ? (drivers.reduce((sum, d) => sum + d.races, 0) / drivers.length).toFixed(1)
+      : "0";
 
   return (
     <div className="panel prose">
@@ -191,12 +196,22 @@ export default function MethodologyPage() {
         the remaining rounds — any driver, particularly those in transitional roles or new to
         the grid, may see grades change significantly as more data accumulates.</p>
 
-      <p><strong>Minimum race count.</strong> Drivers who completed fewer than{" "}
-        {MIN_RACES_FOR_GRADE} races are left out of the grades entirely — a single appearance
-        is far too little to grade a season on, and one volatile result would distort both the
-        model and the score range everyone else is measured against. Their races still count
-        where they are a fact about someone else: the per-race label distribution below, and
-        their teammate&rsquo;s qualifying head-to-head record.</p>
+      <p><strong>Minimum race count.</strong> Drivers who have started fewer than half of
+        the season&rsquo;s races (never fewer than 2) are left out of the grades and the
+        head-to-head page entirely
+        {minRaces != null ? (
+          <> — through round {currentRound}, that means fewer than {minRaces}.</>
+        ) : (
+          <>, though through round {currentRound} nobody has enough races for the rule to apply
+            yet, so everyone is shown.</>
+        )}{" "}
+        A stand-in&rsquo;s handful of races is far too little to grade a season on, and a few
+        volatile results would distort both the model and the score range everyone else is
+        measured against. Their races still count where they are a fact about someone else:
+        the per-race label distribution below, and their teammate&rsquo;s qualifying
+        head-to-head score. The head-to-head page itself compares each pair of teammates only
+        over the races they shared a car, and leaves out pairings shorter than that same bar,
+        such as a driver&rsquo;s short stint in another team&rsquo;s car.</p>
 
       <p><strong>Sample size &amp; volatility.</strong> Only {drivers.length} drivers are graded,
         limiting the robustness of per-driver metrics. Drivers with fewer completed races

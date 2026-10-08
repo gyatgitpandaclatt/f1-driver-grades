@@ -70,6 +70,17 @@ export interface RfMetrics {
   per_class: RfClassMetrics[];
 }
 
+// Teammate qualifying head-to-head, counted only over the rounds the two
+// shared a car.
+export interface QualH2HPair {
+  constructor: string;
+  driver_a: string;
+  driver_b: string;
+  a_wins: number;
+  b_wins: number;
+  races: number;
+}
+
 export interface Meta {
   feature_importances: FeatureImportance[] | null;
   predicted_vs_actual: PredictedVsActualPoint[];
@@ -78,6 +89,9 @@ export interface Meta {
   rf_metrics: RfMetrics | null;
   performance_label_distribution: Record<string, number>;
   total_race_entries: number;
+  // null until anyone clears the bar, when nobody is left out.
+  min_races_for_grade: number | null;
+  qual_h2h_pairs: QualH2HPair[];
 }
 
 export interface DriverGradesResponse {

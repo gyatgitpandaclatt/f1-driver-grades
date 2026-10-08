@@ -1,53 +1,41 @@
-import type { DriverGrade } from "../api/types";
+import type { DriverGrade, QualH2HPair } from "../api/types";
 import H2HBar from "../components/H2HBar";
 import { useLayoutData } from "../layout/useLayoutData";
 
-interface Pair {
-  constructor: string;
-  a: DriverGrade;
-  b: DriverGrade;
-}
-
-function buildPairs(drivers: DriverGrade[]): Pair[] {
-  const byConstructor = new Map<string, DriverGrade[]>();
-  for (const d of drivers) {
-    const list = byConstructor.get(d.constructor) ?? [];
-    list.push(d);
-    byConstructor.set(d.constructor, list);
-  }
-
-  const pairs: Pair[] = [];
-  for (const [constructor, teamDrivers] of byConstructor) {
-    for (let i = 0; i < teamDrivers.length; i++) {
-      for (let j = i + 1; j < teamDrivers.length; j++) {
-        pairs.push({ constructor, a: teamDrivers[i], b: teamDrivers[j] });
-      }
-    }
-  }
-  return pairs;
+// Pairings in the order of the grades table, by the better-ranked driver of
+// each pair; the longer pairing first when they share that driver.
+function orderPairs(pairs: QualH2HPair[], drivers: DriverGrade[]): QualH2HPair[] {
+  const rank = new Map(drivers.map((d, i) => [d.driver_code, i]));
+  const best = (p: QualH2HPair) =>
+    Math.min(rank.get(p.driver_a) ?? Infinity, rank.get(p.driver_b) ?? Infinity);
+  return [...pairs].sort((x, y) => best(x) - best(y) || y.races - x.races);
 }
 
 export default function QualifyingH2HPage() {
-  const { drivers } = useLayoutData();
-  const pairs = buildPairs(drivers);
+  const { drivers, meta } = useLayoutData();
+  const byCode = new Map(drivers.map((d) => [d.driver_code, d]));
+  const pairs = orderPairs(meta.qual_h2h_pairs, drivers);
 
   return (
     <div className="panel">
       <h2>Qualifying Head-to-Head (Teammates)</h2>
       <p className="model-note">
-        How often each driver out-qualified their teammate this season.
+        How often each driver out-qualified their teammate this season, counted over the
+        races the two shared a car.
       </p>
       {pairs.length === 0 && <p className="model-note">Not enough teammate data yet.</p>}
-      {pairs.map(({ constructor, a, b }) => (
-        <div key={`${a.driver_code}-${b.driver_code}`} className="h2h-pair">
-          <div className="h2h-constructor">{constructor}</div>
+      {pairs.map((p) => (
+        <div key={`${p.constructor}-${p.driver_a}-${p.driver_b}`} className="h2h-pair">
+          <div className="h2h-constructor">
+            {p.constructor} · {p.races} {p.races === 1 ? "race" : "races"}
+          </div>
           <H2HBar
-            leftName={a.driver_name}
-            leftCode={a.driver_code}
-            leftWins={a.qual_h2h_wins}
-            rightName={b.driver_name}
-            rightCode={b.driver_code}
-            rightWins={b.qual_h2h_wins}
+            leftName={byCode.get(p.driver_a)?.driver_name ?? p.driver_a}
+            leftCode={p.driver_a}
+            leftWins={p.a_wins}
+            rightName={byCode.get(p.driver_b)?.driver_name ?? p.driver_b}
+            rightCode={p.driver_b}
+            rightWins={p.b_wins}
           />
         </div>
       ))}
