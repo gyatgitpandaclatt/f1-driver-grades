@@ -102,7 +102,7 @@ async def race_session_not_available_handler(request: Request, exc: RaceSessionN
 @app.exception_handler(NarrativeUnavailableError)
 async def narrative_unavailable_handler(request: Request, exc: NarrativeUnavailableError):
     # Registered before the NarrativeGenerationError handler it subclasses.
-    # The reason (credit balance, rejected key) is for the logs, not the page:
+    # The reason (missing or rejected key) is for the logs, not the page:
     # a visitor can do nothing with it, and it describes the operator's
     # account. What the page needs to convey is that waiting will not help.
     logger.error("Narrative unavailable (needs attention, not a retry): %s", exc)
@@ -135,7 +135,7 @@ async def generic_error_handler(request: Request, exc: Exception):
 
 def _warm_caches() -> None:
     # Grades first (cheap, and it's the landing page), then the race summary,
-    # which is the slow one: a run of upstream pages plus a Claude call. Warm
+    # which is the slow one: a run of upstream pages plus an LLM call. Warm
     # it here so the first visitor to /race-summary reads a cache instead of
     # waiting out the whole pipeline.
     logger.info("Startup warm beginning for season %s", SEASON)
