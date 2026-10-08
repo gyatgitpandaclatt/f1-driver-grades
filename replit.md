@@ -41,7 +41,8 @@ Python packages are managed by Replit (no virtualenv needed).
 - To update for a new season: edit `backend/app/config.py`
 - The Race Summary page (`backend/app/race_summary/`) pulls final classification, lap-by-lap
   positions, and pit stops from the same Jolpica/Ergast API as the rest of the app, then writes
-  the narrative with Claude — requires an `ANTHROPIC_API_KEY` in the environment. Its cache is
+  the narrative with Gemini (Cerebras as fallback) — requires a `GEMINI_API_KEY` and/or
+  `CEREBRAS_API_KEY` in the environment. Its cache is
   ~6h (a completed race's data doesn't change).
 - This used to run on FastF1 for richer telemetry/tire/weather/safety-car data, but FastF1's
   live-timing source (`livetiming.formula1.com`) blocks Replit's IP ranges outright (confirmed

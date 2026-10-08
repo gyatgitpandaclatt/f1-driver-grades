@@ -184,7 +184,7 @@ export interface RaceSummaryContext {
   overtakes: Overtake[];
   battles: Battle[];
   // Lineup facts the data provider does not carry (e.g. a stand-in driver),
-  // confirmed against this race's entry list before being handed to Claude.
+  // confirmed against this race's entry list before being handed to the narrative model.
   lineup_notes: string[];
 }
 

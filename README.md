@@ -70,9 +70,9 @@ The `Dockerfile` does the same two steps as `start.sh`: build
    repository**, connect GitHub and pick this repo. Build type: Dockerfile.
 3. Set the trigger's branch pattern to `^master$` — the default is `^main$`,
    which matches nothing in this repo, so the first deploy never starts.
-4. Under Variables & Secrets add `ANTHROPIC_API_KEY` (a Secret Manager
-   secret or a plain env var) — same value as `backend/.env` locally; it is
-   never committed to the repo.
+4. Under Variables & Secrets add `GEMINI_API_KEY` and `CEREBRAS_API_KEY`
+   (Secret Manager secrets or plain env vars) — same values as
+   `backend/.env` locally; they are never committed to the repo.
 5. Memory: 1 GiB is a safe floor for pandas + scikit-learn. Leave min
    instances at 0 so the service scales to zero and stays inside the free
    tier.
@@ -84,7 +84,7 @@ The `Dockerfile` does the same two steps as `start.sh`: build
 The backend warms both caches in a background thread at startup (see
 `_warm_caches` in `backend/app/main.py`), so the first visitor to
 `/race-summary` reads a cache instead of waiting out a run of upstream
-requests plus a Claude call. On Cloud Run's defaults that warm does not
+requests plus an LLM call. On Cloud Run's defaults that warm does not
 work, for two separate reasons:
 
 - **CPU is allocated only during request processing by default.** The warm
@@ -95,7 +95,7 @@ work, for two separate reasons:
   why it failed — check the logs after a deploy to see which happened.
 - **Scale to zero means every cold start warms again.** The caches are
   per-instance and in-memory, so with `min-instances: 0` a low-traffic
-  service pays a fresh narrative (one Claude call) on most visits, and the
+  service pays a fresh narrative (one LLM call) on most visits, and the
   6h cache rarely gets used. Either accept that cost, or set
   `min-instances: 1` so one warm instance stays up and the cache survives
   between visits. Note that both of these settings mean paying for an idle
@@ -115,7 +115,7 @@ installed:
 
 ```
 docker build -t f1-driver-grades .
-docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... f1-driver-grades
+docker run -p 8000:8000 -e GEMINI_API_KEY=... -e CEREBRAS_API_KEY=... f1-driver-grades
 ```
 
 ## Notes
@@ -126,8 +126,9 @@ docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... f1-driver-grades
   hammering the upstream API on every page load. Use the Refresh button in the
   UI (or `POST /api/refresh`) to force a recompute.
 - The Race Summary page (`/race-summary`, backed by `backend/app/race_summary/`)
-  requires an `ANTHROPIC_API_KEY` (used to write the race narrative) — copy
-  `backend/.env.example` to `backend/.env` and fill it in (loaded
+  needs a `GEMINI_API_KEY` and/or `CEREBRAS_API_KEY` to write the race
+  narrative (Gemini is tried first, Cerebras is the fallback; both have free
+  tiers) — copy `backend/.env.example` to `backend/.env` and fill them in (loaded
   automatically on startup), or set it as a real environment variable. Race
   data comes from the same Jolpica/Ergast API as the rest of the app (final
   classification, lap-by-lap positions, pit stops) — there's deliberately no

@@ -1,6 +1,6 @@
 """
 Orchestrate the race summarizer: Jolpica/Ergast ingestion -> event/feature
-extraction -> Claude narrative -> a single JSON-serializable dict matching
+extraction -> LLM narrative -> a single JSON-serializable dict matching
 RaceSummaryResponse.
 
 Ergast has no telemetry, tire compound, weather, or race-control data (that

@@ -64,7 +64,7 @@ DEFAULT_RETRY_AFTER_SECONDS = 30
 MAX_RETRY_AFTER_SECONDS = 300
 MAX_RETRY_SLEEP_SECONDS = 30
 
-# Race summarizer (Jolpica/Ergast + Claude narrative) — a completed race's
+# Race summarizer (Jolpica/Ergast + LLM narrative) — a completed race's
 # data never changes, so this cache can be long-lived; recomputation costs an
 # LLM call, not just an API round trip.
 RACE_SUMMARY_CACHE_TTL_SECONDS = 6 * 60 * 60
@@ -77,11 +77,19 @@ RACE_SUMMARY_CACHE_TTL_SECONDS = 6 * 60 * 60
 ROUND_CACHE_MAX_ROUNDS = 8
 INCOMPLETE_ROUND_CACHE_TTL_SECONDS = 10 * 60
 
-ANTHROPIC_MODEL = "claude-opus-5"
+# Narrative providers, tried in order: Gemini (Google AI Studio free tier)
+# first, Cerebras as the fallback when Gemini is unconfigured, rate limited,
+# or down. Both are called through their OpenAI-compatible endpoints. Keys
+# come from GEMINI_API_KEY / CEREBRAS_API_KEY; a provider without a key is
+# skipped.
+GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+CEREBRAS_MODEL = "gpt-oss-120b"
+CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
 
-# Ceiling on one narrative call. Streamed, so this is a real stall detector
-# rather than "how long may a slow generation take" — it stops a wedged call
-# from pinning the cache's single-flight lock.
+# Ceiling on one narrative call. Gemini is streamed, so for it this is a real
+# stall detector rather than "how long may a slow generation take" — it stops
+# a wedged call from pinning the cache's single-flight lock.
 NARRATIVE_TIMEOUT_SECONDS = 180.0
 
 # Lineup facts the data provider does not carry. Ergast/Jolpica records which
