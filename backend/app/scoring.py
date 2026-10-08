@@ -85,6 +85,38 @@ def compute_qual_h2h_pairs(
     ]
 
 
+def compute_teammate_pts_ratio(race_df: pd.DataFrame, sprint_df: pd.DataFrame) -> pd.DataFrame:
+    """Each driver's points against their teammate's, over the weekends they shared a car.
+
+    The ratio is own / max(own, teammate's): 1.0 for whoever outscored the
+    other, otherwise the share of the teammate's total. Season totals grouped
+    by standings constructor would compare different weekends as soon as a
+    lineup changes — a driver promoted for two races brings those points
+    back to their own team's comparison, and a driver who missed races is
+    measured against points their teammate scored without them.
+
+    Weekend points include the sprint. Every teammate counts, a stand-in
+    included: how a driver fared against them is a fact about that driver.
+    No shared weekend, or neither scoring, gives a neutral 0.5.
+    """
+    weekend = race_df[["round", "constructor", "driver_code", "points_scored"]].merge(
+        sprint_df, on=["round", "driver_code"], how="left"
+    )
+    weekend["points"] = weekend["points_scored"] + weekend["sprint_points"].fillna(0)
+    weekend = weekend[["round", "constructor", "driver_code", "points"]]
+
+    shared = weekend.merge(weekend, on=["round", "constructor"], suffixes=("", "_tm"))
+    shared = shared[shared["driver_code"] != shared["driver_code_tm"]]
+    per_round = shared.groupby(["driver_code", "round"]).agg(
+        own=("points", "first"), tm=("points_tm", "max")
+    )
+    totals = per_round.groupby("driver_code")[["own", "tm"]].sum()
+
+    best = totals[["own", "tm"]].max(axis=1)
+    ratio = (totals["own"] / best.replace(0, np.nan)).fillna(0.5)
+    return ratio.rename("teammate_pts_ratio").reset_index()
+
+
 def assign_grade(score: float) -> str:
     if score >= 88:
         return "S"
@@ -102,6 +134,7 @@ def compute_composite_scores(
     season_labeled_df: pd.DataFrame,
     standings_df: pd.DataFrame,
     qual_stats_df: pd.DataFrame,
+    teammate_df: pd.DataFrame,
 ) -> pd.DataFrame:
     code_to_name = standings_df.set_index("Driver Code")["Driver"].to_dict()
 
@@ -124,8 +157,8 @@ def compute_composite_scores(
 
     df["car_tier"] = df["Constructor"].map(CONSTRUCTOR_TIER).fillna(DEFAULT_CONSTRUCTOR_TIER)
 
-    team_pts = df.groupby("Constructor")["Points"].transform("max")
-    df["teammate_pts_ratio"] = (df["Points"] / team_pts.replace(0, np.nan)).fillna(0.5)
+    df = df.merge(teammate_df, on="driver_code", how="left")
+    df["teammate_pts_ratio"] = df["teammate_pts_ratio"].fillna(0.5)
 
     max_pts = df["Points"].max()
     max_pos = df["Position"].max()

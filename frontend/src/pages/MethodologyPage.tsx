@@ -82,9 +82,9 @@ export default function MethodologyPage() {
           earn higher scores.
         </li>
         <li>
-          <strong>Teammate Points Ratio Score (15% weight)</strong> — points relative to the
-          highest-scoring teammate on the same constructor; isolates driver value from car
-          performance.
+          <strong>Teammate Points Ratio Score (15% weight)</strong> — points (Grand Prix and
+          sprint) relative to the teammate&rsquo;s, counted only over the weekends the two shared
+          a car; isolates driver value from car performance.
         </li>
         <li>
           <strong>Qualifying Score (15% weight)</strong> — a composite of three
@@ -208,8 +208,8 @@ export default function MethodologyPage() {
         A stand-in&rsquo;s handful of races is far too little to grade a season on, and a few
         volatile results would distort both the model and the score range everyone else is
         measured against. Their races still count where they are a fact about someone else:
-        the per-race label distribution below, and their teammate&rsquo;s qualifying
-        head-to-head score. The head-to-head page itself compares each pair of teammates only
+        the per-race label distribution below, and their teammate&rsquo;s points ratio and
+        qualifying head-to-head score. The head-to-head page itself compares each pair of teammates only
         over the races they shared a car, and leaves out pairings shorter than that same bar,
         such as a driver&rsquo;s short stint in another team&rsquo;s car.</p>
 
