@@ -32,7 +32,8 @@ def filter_gradeable_drivers(
 
     Applied to the per-driver table only, so an excluded driver's races
     still count everywhere they are a fact about someone else: the per-race
-    label distribution, and their teammate's qualifying head-to-head score.
+    label distribution, and their teammate's points ratio and qualifying
+    head-to-head score.
 
     Falls back to the unfiltered table if nobody clears the bar — after
     round 1 every driver has a single race, and an empty table would leave
