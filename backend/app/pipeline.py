@@ -69,8 +69,9 @@ def run_pipeline(season: int = SEASON) -> dict:
     # Before labelling or modelling: a one-race stand-in is noise to train on
     # and would stretch the score normalisation the rest of the grid is
     # measured against.
-    min_races = min_races_for_grade(int(model_df["round"].nunique()))
-    driver_season_df = filter_gradeable_drivers(driver_season_df, min_races)
+    driver_season_df, min_races = filter_gradeable_drivers(
+        driver_season_df, min_races_for_grade(int(model_df["round"].nunique()))
+    )
     season_labeled_df = assign_season_label(driver_season_df)
 
     season_labeled_df, feature_importances, model_note, rf_metrics = run_model(season_labeled_df)
@@ -79,7 +80,7 @@ def run_pipeline(season: int = SEASON) -> dict:
     qual_stats_df = compute_qual_stats(merged_df)
 
     final_df = compute_composite_scores(season_labeled_df, standings_df, qual_stats_df)
-    qual_h2h_pairs = compute_qual_h2h_pairs(merged_df, final_df["driver_code"])
+    qual_h2h_pairs = compute_qual_h2h_pairs(merged_df, final_df["driver_code"], min_races)
 
     drivers = [_row_to_driver_dict(row) for _, row in final_df.iterrows()]
 

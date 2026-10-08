@@ -2,8 +2,8 @@ import type { DriverGrade, QualH2HPair } from "../api/types";
 import H2HBar from "../components/H2HBar";
 import { useLayoutData } from "../layout/useLayoutData";
 
-// Pairings in the order of the grades table: by the better-ranked driver of
-// each pair, and a team's regular pairing ahead of a short stint.
+// Pairings in the order of the grades table, by the better-ranked driver of
+// each pair; the longer pairing first when they share that driver.
 function orderPairs(pairs: QualH2HPair[], drivers: DriverGrade[]): QualH2HPair[] {
   const rank = new Map(drivers.map((d, i) => [d.driver_code, i]));
   const best = (p: QualH2HPair) =>

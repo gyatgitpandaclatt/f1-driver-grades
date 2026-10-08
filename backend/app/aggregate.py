@@ -25,7 +25,9 @@ def min_races_for_grade(completed_rounds: int) -> int:
     return max(MIN_RACES_FOR_GRADE, math.ceil(MIN_RACE_SHARE_FOR_GRADE * completed_rounds))
 
 
-def filter_gradeable_drivers(driver_season_df: pd.DataFrame, min_races: int) -> pd.DataFrame:
+def filter_gradeable_drivers(
+    driver_season_df: pd.DataFrame, min_races: int
+) -> tuple[pd.DataFrame, int | None]:
     """Drop drivers with too few races to be graded meaningfully.
 
     Applied to the per-driver table only, so an excluded driver's races
@@ -35,11 +37,14 @@ def filter_gradeable_drivers(driver_season_df: pd.DataFrame, min_races: int) -> 
     Falls back to the unfiltered table if nobody clears the bar — after
     round 1 every driver has a single race, and an empty table would leave
     the page with nothing to show at all.
+
+    Returns the table and the bar actually applied: None when the fallback
+    kept everyone.
     """
     eligible = driver_season_df[driver_season_df["races"] >= min_races]
     if eligible.empty:
-        return driver_season_df
-    return eligible.reset_index(drop=True)
+        return driver_season_df, None
+    return eligible.reset_index(drop=True), min_races
 
 
 def _assign_season_label(row) -> str:

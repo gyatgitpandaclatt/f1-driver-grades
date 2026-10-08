@@ -90,7 +90,9 @@ class Meta(BaseModel):
     rf_metrics: Optional[RfMetrics]
     performance_label_distribution: dict[str, int]
     total_race_entries: int
-    min_races_for_grade: int
+    # None until anyone clears the bar (after round 1 nobody has two races),
+    # when nobody is left out.
+    min_races_for_grade: Optional[int]
     qual_h2h_pairs: List[QualH2HPair]
 
 

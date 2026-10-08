@@ -89,7 +89,8 @@ export interface Meta {
   rf_metrics: RfMetrics | null;
   performance_label_distribution: Record<string, number>;
   total_race_entries: number;
-  min_races_for_grade: number;
+  // null until anyone clears the bar, when nobody is left out.
+  min_races_for_grade: number | null;
   qual_h2h_pairs: QualH2HPair[];
 }
 

@@ -39,16 +39,22 @@ def compute_qual_stats(merged_df: pd.DataFrame) -> pd.DataFrame:
     return qual_stats
 
 
-def compute_qual_h2h_pairs(merged_df: pd.DataFrame, driver_codes) -> list[dict]:
+def compute_qual_h2h_pairs(
+    merged_df: pd.DataFrame, driver_codes, min_races: int | None = None
+) -> list[dict]:
     """Teammate qualifying head-to-head, one record per pairing.
 
-    Counted only over the rounds the two shared a car. A driver's own
-    qual_h2h_wins pools every teammate they had, so once a stand-in or a
-    mid-season swap gives someone a second teammate, setting two drivers'
-    totals side by side compares different sets of races. Only pairings
-    between driver_codes (the graded drivers) are kept.
+    Counted only over the rounds the two shared a car and both have a
+    qualifying position. A driver's own qual_h2h_wins pools every teammate
+    they had, so once a stand-in or a mid-season swap gives someone a second
+    teammate, setting two drivers' totals side by side compares different
+    sets of races.
+
+    Only pairings between driver_codes (the graded drivers) are kept, and
+    only those with at least min_races shared rounds — the bar a driver needs
+    to be graded — so a short stint drops out the same way a stand-in does.
     """
-    quali = merged_df[["round", "constructor", "driver_code", "qual_pos"]]
+    quali = merged_df[["round", "constructor", "driver_code", "qual_pos"]].dropna(subset=["qual_pos"])
     quali = quali[quali["driver_code"].isin(set(driver_codes))]
     shared = quali.merge(quali, on=["round", "constructor"], suffixes=("_a", "_b"))
     # Each pairing once, in a stable order.
@@ -56,7 +62,6 @@ def compute_qual_h2h_pairs(merged_df: pd.DataFrame, driver_codes) -> list[dict]:
     if shared.empty:
         return []
 
-    # As in compute_qual_stats, a missing qualifying position wins nothing.
     shared["a_won"] = (shared["qual_pos_a"] < shared["qual_pos_b"]).astype(int)
     shared["b_won"] = (shared["qual_pos_b"] < shared["qual_pos_a"]).astype(int)
     records = (
@@ -65,6 +70,8 @@ def compute_qual_h2h_pairs(merged_df: pd.DataFrame, driver_codes) -> list[dict]:
         .reset_index()
         .sort_values("races", ascending=False)
     )
+    if min_races is not None:
+        records = records[records["races"] >= min_races]
     return [
         {
             "constructor": row["constructor"],
