@@ -9,11 +9,21 @@ from .aggregate import (
     min_races_for_grade,
 )
 from .config import SEASON
-from .data_fetch import fetch_driver_standings, fetch_qualifying_results, fetch_race_results
+from .data_fetch import (
+    fetch_driver_standings,
+    fetch_qualifying_results,
+    fetch_race_results,
+    fetch_sprint_points,
+)
 from .exceptions import NoRaceDataError
 from .features import build_target, engineer_features, merge_qualifying_and_race
 from .model import run_model
-from .scoring import compute_composite_scores, compute_qual_h2h_pairs, compute_qual_stats
+from .scoring import (
+    compute_composite_scores,
+    compute_qual_h2h_pairs,
+    compute_qual_stats,
+    compute_teammate_pts_ratio,
+)
 
 
 def _row_to_driver_dict(row: pd.Series) -> dict:
@@ -78,8 +88,9 @@ def run_pipeline(season: int = SEASON) -> dict:
 
     standings_df = fetch_driver_standings(season)
     qual_stats_df = compute_qual_stats(merged_df)
+    teammate_df = compute_teammate_pts_ratio(race_df, fetch_sprint_points(season))
 
-    final_df = compute_composite_scores(season_labeled_df, standings_df, qual_stats_df)
+    final_df = compute_composite_scores(season_labeled_df, standings_df, qual_stats_df, teammate_df)
     qual_h2h_pairs = compute_qual_h2h_pairs(merged_df, final_df["driver_code"], min_races)
 
     drivers = [_row_to_driver_dict(row) for _, row in final_df.iterrows()]

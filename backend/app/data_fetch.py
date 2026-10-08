@@ -115,7 +115,7 @@ def _get_json(url: str) -> dict:
 
 
 # The per-race list key varies by endpoint; a race payload carries exactly one.
-RESULT_KEYS = ("Results", "QualifyingResults")
+RESULT_KEYS = ("Results", "QualifyingResults", "SprintResults")
 
 
 def _paginate_races(endpoint: str, season: int):
@@ -200,6 +200,21 @@ def fetch_race_results(season: int) -> pd.DataFrame:
             })
 
     return pd.DataFrame(rows)
+
+
+def fetch_sprint_points(season: int) -> pd.DataFrame:
+    """Points each driver scored in each sprint. Race results leave these out."""
+    rows = []
+    for race in _paginate_races("sprint", season):
+        round_num = int(race["round"])
+        for res in race["SprintResults"]:
+            rows.append({
+                "round": round_num,
+                "driver_code": res["Driver"].get("code", ""),
+                "sprint_points": float(res["points"]),
+            })
+
+    return pd.DataFrame(rows, columns=["round", "driver_code", "sprint_points"])
 
 
 def fetch_driver_standings(season: int) -> pd.DataFrame:
