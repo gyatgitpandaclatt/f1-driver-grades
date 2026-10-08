@@ -1,6 +1,8 @@
+import math
+
 import pandas as pd
 
-from .config import MIN_RACES_FOR_GRADE, ROOKIES
+from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE, ROOKIES
 
 
 def build_driver_season_table(model_df: pd.DataFrame) -> pd.DataFrame:
@@ -18,14 +20,17 @@ def build_driver_season_table(model_df: pd.DataFrame) -> pd.DataFrame:
     return driver_season_df
 
 
-def filter_gradeable_drivers(
-    driver_season_df: pd.DataFrame, min_races: int = MIN_RACES_FOR_GRADE
-) -> pd.DataFrame:
+def min_races_for_grade(completed_rounds: int) -> int:
+    """Races a driver needs to be graded, given how far the season has run."""
+    return max(MIN_RACES_FOR_GRADE, math.ceil(MIN_RACE_SHARE_FOR_GRADE * completed_rounds))
+
+
+def filter_gradeable_drivers(driver_season_df: pd.DataFrame, min_races: int) -> pd.DataFrame:
     """Drop drivers with too few races to be graded meaningfully.
 
     Applied to the per-driver table only, so an excluded driver's races
     still count everywhere they are a fact about someone else: the per-race
-    label distribution, and their teammate's qualifying head-to-head record.
+    label distribution, and their teammate's qualifying head-to-head score.
 
     Falls back to the unfiltered table if nobody clears the bar — after
     round 1 every driver has a single race, and an empty table would leave

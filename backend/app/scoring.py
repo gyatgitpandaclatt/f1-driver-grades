@@ -39,6 +39,45 @@ def compute_qual_stats(merged_df: pd.DataFrame) -> pd.DataFrame:
     return qual_stats
 
 
+def compute_qual_h2h_pairs(merged_df: pd.DataFrame, driver_codes) -> list[dict]:
+    """Teammate qualifying head-to-head, one record per pairing.
+
+    Counted only over the rounds the two shared a car. A driver's own
+    qual_h2h_wins pools every teammate they had, so once a stand-in or a
+    mid-season swap gives someone a second teammate, setting two drivers'
+    totals side by side compares different sets of races. Only pairings
+    between driver_codes (the graded drivers) are kept.
+    """
+    quali = merged_df[["round", "constructor", "driver_code", "qual_pos"]]
+    quali = quali[quali["driver_code"].isin(set(driver_codes))]
+    shared = quali.merge(quali, on=["round", "constructor"], suffixes=("_a", "_b"))
+    # Each pairing once, in a stable order.
+    shared = shared[shared["driver_code_a"] < shared["driver_code_b"]].copy()
+    if shared.empty:
+        return []
+
+    # As in compute_qual_stats, a missing qualifying position wins nothing.
+    shared["a_won"] = (shared["qual_pos_a"] < shared["qual_pos_b"]).astype(int)
+    shared["b_won"] = (shared["qual_pos_b"] < shared["qual_pos_a"]).astype(int)
+    records = (
+        shared.groupby(["constructor", "driver_code_a", "driver_code_b"])
+        .agg(a_wins=("a_won", "sum"), b_wins=("b_won", "sum"), races=("round", "nunique"))
+        .reset_index()
+        .sort_values("races", ascending=False)
+    )
+    return [
+        {
+            "constructor": row["constructor"],
+            "driver_a": row["driver_code_a"],
+            "driver_b": row["driver_code_b"],
+            "a_wins": int(row["a_wins"]),
+            "b_wins": int(row["b_wins"]),
+            "races": int(row["races"]),
+        }
+        for _, row in records.iterrows()
+    ]
+
+
 def assign_grade(score: float) -> str:
     if score >= 88:
         return "S"

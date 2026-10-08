@@ -73,6 +73,15 @@ class RfMetrics(BaseModel):
     per_class: List[RfClassMetrics]
 
 
+class QualH2HPair(BaseModel):
+    constructor: str
+    driver_a: str
+    driver_b: str
+    a_wins: int
+    b_wins: int
+    races: int
+
+
 class Meta(BaseModel):
     feature_importances: Optional[List[FeatureImportance]]
     predicted_vs_actual: List[PredictedVsActualPoint]
@@ -81,6 +90,8 @@ class Meta(BaseModel):
     rf_metrics: Optional[RfMetrics]
     performance_label_distribution: dict[str, int]
     total_race_entries: int
+    min_races_for_grade: int
+    qual_h2h_pairs: List[QualH2HPair]
 
 
 class DriverGradesResponse(BaseModel):
