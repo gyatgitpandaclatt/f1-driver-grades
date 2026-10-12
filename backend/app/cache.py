@@ -1,8 +1,9 @@
 from .cache_base import SeasonCache
 from .config import CACHE_TTL_SECONDS
 from .pipeline import run_pipeline
+from .snapshots import prefer_snapshot
 
-_cache = SeasonCache(run_pipeline, CACHE_TTL_SECONDS, name="driver grades")
+_cache = SeasonCache(prefer_snapshot("driver_grades", run_pipeline), CACHE_TTL_SECONDS, name="driver grades")
 
 
 def get_or_compute(season: int) -> dict:

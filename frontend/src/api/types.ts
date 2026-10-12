@@ -125,6 +125,8 @@ export interface DriverGradesResponse {
   last_updated: string;
   drivers: DriverGrade[];
   meta: Meta;
+  // Served from a saved snapshot of a finished season.
+  snapshot: boolean;
 }
 
 export interface NoDataResponse {
@@ -401,6 +403,8 @@ export interface SeasonSummaryResponse {
   sections: SeasonSummarySections;
   context: SeasonSummaryContext;
   charts: SeasonSummaryChartData;
+  // Served from a saved snapshot: refreshing can't change it.
+  snapshot: boolean;
 }
 
 export type SeasonSummaryApiResult =

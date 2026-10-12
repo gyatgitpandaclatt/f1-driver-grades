@@ -32,6 +32,7 @@ Python packages are managed by Replit (no virtualenv needed).
 
 - `backend/app/main.py` — FastAPI app, routes, static file serving
 - `backend/app/config.py` — Season window and the thresholds for live rookies, constructor tiers and season-summary moments
+- `backend/app/snapshots.py` — Saves finished seasons to `backend/snapshots/` (`python -m app.snapshots`, from `backend/`) and serves them in place of a live compute
 - `frontend/src/theme/theme.ts` — Recharts color constants (keep in sync with `index.css`)
 - `frontend/src/index.css` — Global styles and design tokens
 - `start.sh` — Single entrypoint for Replit

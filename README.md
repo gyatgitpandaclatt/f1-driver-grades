@@ -120,6 +120,36 @@ docker build -t f1-driver-grades .
 docker run -p 8000:8000 -e GEMINI_API_KEY=... -e CEREBRAS_API_KEY=... f1-driver-grades
 ```
 
+## Snapshots of finished seasons
+
+A finished season's grades and season summary never change, but computing
+them costs ~20–45 Jolpica requests, an LLM call and several seconds of
+model fitting — and on Cloud Run, with the in-memory caches empty after
+every cold start, that cost comes back again and again. Saving them once
+removes it: the site serves a season's snapshot without touching Jolpica
+or the LLM.
+
+From `backend/`, on a machine that can reach Jolpica, with
+`GEMINI_API_KEY` and/or `CEREBRAS_API_KEY` in `backend/.env`:
+
+```
+py -m app.snapshots              # every finished season the selector offers
+py -m app.snapshots 2024 2025    # just these
+py -m app.snapshots --force      # rebuild ones already saved
+py -m app.snapshots --grades-only
+```
+
+Then commit `backend/snapshots/*.json`; the Docker image picks them up with
+the rest of `backend/`. All five seasons take ~150–250 requests, inside
+Jolpica's 500/hour; if it rate limits the run, the script waits and carries
+on. Rerun it after a season ends to save that one too.
+
+A season without a snapshot is computed live, as before. So is one whose
+snapshot no longer matches the response schema (after a field is added,
+say): it is logged and ignored until rebuilt with `--force`. A snapshot is
+fixed, so the Season Summary page hides its Refresh button for one; to
+rewrite a narrative, rebuild that season's snapshot.
+
 ## Notes
 
 - Nothing needs updating each season. The current season is the calendar year,
@@ -133,9 +163,10 @@ docker run -p 8000:8000 -e GEMINI_API_KEY=... -e CEREBRAS_API_KEY=... f1-driver-
 - The backend caches computed results in memory (~20 min TTL) to avoid
   hammering the upstream API on every page load. Use the Refresh button in the
   UI (or `POST /api/refresh`) to force a recompute. A finished season never
-  changes, so its grades and season summary are computed the first time
-  someone opens it and then kept for the life of the process; the startup
-  warm only covers the current season.
+  changes, so its grades and season summary come from its snapshot if one is
+  saved (see above), or are computed the first time someone opens it and then
+  kept for the life of the process; the startup warm only covers the current
+  season.
 - Jolpica serves at most 100 rows a page and allows 500 requests an hour
   unauthenticated. Opening a past season for the first time costs roughly
   20–45 requests (its results, plus career lookups for rookies and career

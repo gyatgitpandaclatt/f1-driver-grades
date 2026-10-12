@@ -125,6 +125,8 @@ class DriverGradesResponse(BaseModel):
     last_updated: str
     drivers: List[DriverGrade]
     meta: Meta
+    # Served from a saved snapshot of a finished season (see snapshots.py).
+    snapshot: bool = False
 
 
 class SeasonsResponse(BaseModel):

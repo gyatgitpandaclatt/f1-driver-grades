@@ -19,6 +19,7 @@ interface State {
   sections: SeasonSummarySections | null;
   context: SeasonSummaryContext | null;
   charts: SeasonSummaryChartData | null;
+  snapshot: boolean;
   message: string | null;
 }
 
@@ -31,6 +32,7 @@ const initialState: State = {
   sections: null,
   context: null,
   charts: null,
+  snapshot: false,
   message: null,
 };
 
@@ -71,6 +73,7 @@ export function useSeasonSummary(season: number) {
           sections: result.sections,
           context: result.context,
           charts: result.charts,
+          snapshot: result.snapshot,
           message: null,
         });
       } else {
@@ -109,6 +112,7 @@ export function useSeasonSummary(season: number) {
           sections: result.sections,
           context: result.context,
           charts: result.charts,
+          snapshot: result.snapshot,
           message: null,
         });
       } else if (state.status !== "ok") {

@@ -19,6 +19,7 @@ function SeasonSummary({ season }: { season: number }) {
     sections,
     context,
     charts,
+    snapshot,
     message,
     refresh,
     refreshing,
@@ -52,7 +53,10 @@ function SeasonSummary({ season }: { season: number }) {
           ? `, with ${decided.rounds_left} ${decided.rounds_left === 1 ? "round" : "rounds"} to go`
           : ", the final round"}
       </p>
-      <RefreshButton onRefresh={refresh} refreshing={refreshing} error={refreshError} />
+      {/* A saved snapshot is fixed: rewriting it is the snapshot script's job. */}
+      {!snapshot && (
+        <RefreshButton onRefresh={refresh} refreshing={refreshing} error={refreshError} />
+      )}
 
       <h3>Season Summary</h3>
       <NarrativeSection text={sections.summary} />

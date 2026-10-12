@@ -154,3 +154,5 @@ class SeasonSummaryResponse(BaseModel):
     sections: SeasonSummarySections
     context: SeasonSummaryContext
     charts: SeasonSummaryChartData
+    # Served from a saved snapshot (see snapshots.py): refreshing can't change it.
+    snapshot: bool = False
