@@ -10,6 +10,7 @@ interface State {
   drivers: DriverGrade[];
   meta: Meta | null;
   season: number | null;
+  isCurrentSeason: boolean | null;
   currentRound: number | null;
   lastUpdated: string | null;
   message: string | null;
@@ -20,6 +21,7 @@ const initialState: State = {
   drivers: [],
   meta: null,
   season: null,
+  isCurrentSeason: null,
   currentRound: null,
   lastUpdated: null,
   message: null,
@@ -28,21 +30,28 @@ const initialState: State = {
 const UNREACHABLE_MESSAGE =
   "Could not reach the backend. Is it running at the configured API URL?";
 
-export function useDriverGrades() {
+// `season` null means the current season.
+export function useDriverGrades(season: number | null) {
   const [state, setState] = useState<State>(initialState);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const loadRef = useRef<(() => void) | null>(null);
   const { schedule, cancel } = useAutoRetry(loadRef);
+  // Only the latest request may land. Switching seasons while one is still
+  // loading would otherwise let the slower answer, for the season the
+  // visitor already left, overwrite the one they picked.
+  const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
     // Supersede any retry already scheduled: without this, a timer armed by
     // an earlier "busy" response fires after this load succeeds and throws
     // the page back to a loading state over data that is already good.
     cancel();
+    const request = ++latestRequest.current;
     setState((s) => ({ ...s, status: "loading" }));
     try {
-      const result = await fetchDriverGrades();
+      const result = await fetchDriverGrades(season);
+      if (request !== latestRequest.current) return;
       if (result.status === "busy") {
         setState((s) => ({ ...s, status: "busy", message: result.message }));
         schedule(result.retry_after);
@@ -54,6 +63,7 @@ export function useDriverGrades() {
           drivers: result.drivers,
           meta: result.meta,
           season: result.season,
+          isCurrentSeason: result.is_current_season,
           currentRound: result.current_round,
           lastUpdated: result.last_updated,
           message: null,
@@ -62,16 +72,19 @@ export function useDriverGrades() {
         setState((s) => ({ ...s, status: result.status, message: result.message }));
       }
     } catch {
+      if (request !== latestRequest.current) return;
       setState((s) => ({ ...s, status: "error", message: UNREACHABLE_MESSAGE }));
     }
-  }, [cancel, schedule]);
+  }, [cancel, schedule, season]);
 
   const refresh = useCallback(async () => {
     cancel();
+    const request = ++latestRequest.current;
     setRefreshing(true);
     setRefreshError(null);
     try {
-      const result = await refreshDriverGrades();
+      const result = await refreshDriverGrades(season);
+      if (request !== latestRequest.current) return;
       if (result.status === "busy") {
         if (state.status !== "ok") {
           setState((s) => ({ ...s, status: "busy", message: result.message }));
@@ -87,6 +100,7 @@ export function useDriverGrades() {
           drivers: result.drivers,
           meta: result.meta,
           season: result.season,
+          isCurrentSeason: result.is_current_season,
           currentRound: result.current_round,
           lastUpdated: result.last_updated,
           message: null,
@@ -101,6 +115,7 @@ export function useDriverGrades() {
         setRefreshError(result.message);
       }
     } catch {
+      if (request !== latestRequest.current) return;
       if (state.status !== "ok") {
         setState((s) => ({ ...s, status: "error", message: UNREACHABLE_MESSAGE }));
       } else {
@@ -109,7 +124,7 @@ export function useDriverGrades() {
     } finally {
       setRefreshing(false);
     }
-  }, [state.status, cancel, schedule]);
+  }, [state.status, cancel, schedule, season]);
 
   useEffect(() => {
     loadRef.current = load;

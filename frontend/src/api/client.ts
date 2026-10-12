@@ -1,4 +1,9 @@
-import type { DriverGradesApiResult, RaceSummaryApiResult } from "./types";
+import type {
+  DriverGradesApiResult,
+  RaceSummaryApiResult,
+  SeasonsApiResult,
+  SeasonSummaryApiResult,
+} from "./types";
 
 // Relative paths: in dev, Vite's server.proxy forwards /api to the backend
 // (see vite.config.ts); in production, FastAPI serves the built frontend
@@ -22,13 +27,23 @@ async function parseResult<T>(res: Response): Promise<T> {
   }
 }
 
-export async function fetchDriverGrades(): Promise<DriverGradesApiResult> {
-  const res = await fetch("/api/driver-grades");
+// null asks for the current season, the backend's default.
+function seasonQuery(season: number | null): string {
+  return season == null ? "" : `?season=${season}`;
+}
+
+export async function fetchSeasons(): Promise<SeasonsApiResult> {
+  const res = await fetch("/api/seasons");
+  return parseResult<SeasonsApiResult>(res);
+}
+
+export async function fetchDriverGrades(season: number | null): Promise<DriverGradesApiResult> {
+  const res = await fetch(`/api/driver-grades${seasonQuery(season)}`);
   return parseResult<DriverGradesApiResult>(res);
 }
 
-export async function refreshDriverGrades(): Promise<DriverGradesApiResult> {
-  const res = await fetch("/api/refresh", { method: "POST" });
+export async function refreshDriverGrades(season: number | null): Promise<DriverGradesApiResult> {
+  const res = await fetch(`/api/refresh${seasonQuery(season)}`, { method: "POST" });
   return parseResult<DriverGradesApiResult>(res);
 }
 
@@ -40,4 +55,14 @@ export async function fetchRaceSummary(): Promise<RaceSummaryApiResult> {
 export async function refreshRaceSummary(): Promise<RaceSummaryApiResult> {
   const res = await fetch("/api/race-summary/refresh", { method: "POST" });
   return parseResult<RaceSummaryApiResult>(res);
+}
+
+export async function fetchSeasonSummary(season: number): Promise<SeasonSummaryApiResult> {
+  const res = await fetch(`/api/season-summary${seasonQuery(season)}`);
+  return parseResult<SeasonSummaryApiResult>(res);
+}
+
+export async function refreshSeasonSummary(season: number): Promise<SeasonSummaryApiResult> {
+  const res = await fetch(`/api/season-summary/refresh${seasonQuery(season)}`, { method: "POST" });
+  return parseResult<SeasonSummaryApiResult>(res);
 }

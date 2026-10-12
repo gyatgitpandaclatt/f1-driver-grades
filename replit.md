@@ -1,6 +1,6 @@
-# F1 2026 Driver Grades
+# F1 Driver Grades
 
-Computes S/A/B/C/D letter grades for 2026 F1 drivers from live qualifying/race results and standings, displaying them in a data-rich web UI with feature-importance and predicted-vs-actual charts.
+Computes S/A/B/C/D letter grades for F1 drivers (the current season and the previous five) from live qualifying/race results and standings, displaying them in a data-rich web UI with feature-importance and predicted-vs-actual charts.
 
 ## Stack
 
@@ -24,13 +24,14 @@ Python packages are managed by Replit (no virtualenv needed).
 | `/qualifying-h2h` | Head-to-head qualifying comparisons |
 | `/overperformance` | Drivers exceeding model expectations |
 | `/grid-improvement` | Progress across the grid |
-| `/race-summary` | AI-written narrative recap of the most recent completed race, with a position chart |
+| `/race-summary` | AI-written narrative recap of the most recent completed race, with a position chart (current season only) |
+| `/season-summary` | AI-written review of a finished season, with a championship-position chart, quarterly analysis and crucial moments (previous seasons only) |
 | `/methodology` | How grading works |
 
 ## Key Files
 
 - `backend/app/main.py` — FastAPI app, routes, static file serving
-- `backend/app/config.py` — Season settings (year, rookie codes, constructor tier map)
+- `backend/app/config.py` — Season window and the thresholds for live rookies, constructor tiers and season-summary moments
 - `frontend/src/theme/theme.ts` — Recharts color constants (keep in sync with `index.css`)
 - `frontend/src/index.css` — Global styles and design tokens
 - `start.sh` — Single entrypoint for Replit
@@ -38,7 +39,7 @@ Python packages are managed by Replit (no virtualenv needed).
 ## Notes
 
 - Backend caches results ~20 min in memory; use the Refresh button or `POST /api/refresh` to force recompute
-- To update for a new season: edit `backend/app/config.py`
+- Every page takes `?season=YYYY` (absent = current season); the season selector at the right of the tabs sets it. Nothing needs editing for a new season
 - The Race Summary page (`backend/app/race_summary/`) pulls final classification, lap-by-lap
   positions, and pit stops from the same Jolpica/Ergast API as the rest of the app, then writes
   the narrative with Gemini (Cerebras as fallback) — requires a `GEMINI_API_KEY` and/or

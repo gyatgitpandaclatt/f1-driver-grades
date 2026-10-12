@@ -1,10 +1,12 @@
+import { Navigate, useLocation } from "react-router";
 import NarrativeSection from "../components/NarrativeSection";
 import PositionChangesChart from "../components/PositionChangesChart";
 import RefreshButton from "../components/RefreshButton";
 import StatusBanner from "../components/StatusBanner";
 import { useRaceSummary } from "../hooks/useRaceSummary";
+import { useLayoutData } from "../layout/useLayoutData";
 
-export default function RaceSummaryPage() {
+function RaceSummary() {
   const {
     status,
     season,
@@ -105,4 +107,14 @@ export default function RaceSummaryPage() {
       <NarrativeSection text={sections.driver_of_the_day} />
     </div>
   );
+}
+
+// The current season only: a finished season has the season summary instead.
+export default function RaceSummaryPage() {
+  const { isCurrentSeason } = useLayoutData();
+  const { search } = useLocation();
+  if (!isCurrentSeason) {
+    return <Navigate to={{ pathname: "/season-summary", search }} replace />;
+  }
+  return <RaceSummary />;
 }

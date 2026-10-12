@@ -1,3 +1,4 @@
+import functools
 import logging
 import math
 import threading
@@ -18,6 +19,7 @@ from .config import (
     REQUEST_TIMEOUT,
     UPSTREAM_BACKOFF_BASE_SECONDS,
     UPSTREAM_MAX_CONCURRENCY,
+    is_completed_season,
 )
 from .exceptions import UpstreamAPIError, UpstreamRateLimitedError
 
@@ -114,15 +116,53 @@ def _get_json(url: str) -> dict:
     raise UpstreamAPIError(f"Failed to fetch {url}: {last_exc}") from last_exc
 
 
+# A finished season's fetches, keyed by (fetcher, season). Its results never
+# change, and the grades and the season summary for the same season both
+# need them, so each is fetched once per process and shared. The current
+# season is always fetched fresh: its callers' own caches decide how fresh.
+#
+# Per-process state, like race_summary/ingestion.py's round cache: fine under
+# the single uvicorn worker start.sh and the Dockerfile run.
+_completed_season_data: dict[tuple[str, int], pd.DataFrame] = {}
+_completed_season_locks: dict[tuple[str, int], threading.Lock] = {}
+_completed_season_guard = threading.Lock()
+
+
+def _shared_once_completed(fetch):
+    @functools.wraps(fetch)
+    def wrapper(season: int) -> pd.DataFrame:
+        if not is_completed_season(season):
+            return fetch(season)
+        key = (fetch.__name__, int(season))
+        with _completed_season_guard:
+            lock = _completed_season_locks.setdefault(key, threading.Lock())
+        # Per key, so the grades and the summary opening the same season at
+        # once share one fetch instead of racing each other upstream.
+        with lock:
+            data = _completed_season_data.get(key)
+            if data is None:
+                data = fetch(season)
+                # An empty answer for a finished season means the provider
+                # had a bad moment, not that the season had no races.
+                if data.empty:
+                    return data
+                _completed_season_data[key] = data
+        # Callers are free to modify what they get back.
+        return data.copy()
+    return wrapper
+
+
 # The per-race list key varies by endpoint; a race payload carries exactly one.
 RESULT_KEYS = ("Results", "QualifyingResults", "SprintResults")
 
 
-def _paginate_races(endpoint: str, season: int):
+def paginate_races(path: str) -> list[dict]:
+    """Every race in a paginated RaceTable response, e.g. for "2024/results"
+    or "drivers/alonso/results/1"."""
     offset = 0
     all_races = []
     while True:
-        url = f"{API_BASE_URL}/{season}/{endpoint}.json?limit={PAGE_LIMIT}&offset={offset}"
+        url = f"{API_BASE_URL}/{path}.json?limit={PAGE_LIMIT}&offset={offset}"
         data = _get_json(url)
         try:
             mrdata = data["MRData"]
@@ -145,6 +185,11 @@ def _paginate_races(endpoint: str, season: int):
     return all_races
 
 
+def _paginate_races(endpoint: str, season: int) -> list[dict]:
+    return paginate_races(f"{season}/{endpoint}")
+
+
+@_shared_once_completed
 def fetch_qualifying_results(season: int) -> pd.DataFrame:
     rows = []
     for race in _paginate_races("qualifying", season):
@@ -159,6 +204,7 @@ def fetch_qualifying_results(season: int) -> pd.DataFrame:
                 "season": season,
                 "round": round_num,
                 "race_name": race_name,
+                "driver_id": driver.get("driverId", ""),
                 "driver_code": driver.get("code", ""),
                 "driver": f"{driver.get('givenName', '')} {driver.get('familyName', '')}".strip(),
                 "constructor": constructor.get("name", ""),
@@ -169,6 +215,7 @@ def fetch_qualifying_results(season: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+@_shared_once_completed
 def fetch_race_results(season: int) -> pd.DataFrame:
     rows = []
     for race in _paginate_races("results", season):
@@ -183,17 +230,22 @@ def fetch_race_results(season: int) -> pd.DataFrame:
             is_classified = pos_text.lstrip("-").isdigit()
             finish_pos = int(res["position"]) if is_classified else None
             dnf = 0 if is_classified else 1
+            # Total race time, given only to finishers on the lead lap.
+            millis = (res.get("Time") or {}).get("millis")
 
             rows.append({
                 "season": season,
                 "round": round_num,
                 "race_name": race_name,
+                "driver_id": driver.get("driverId", ""),
                 "driver_code": driver.get("code", ""),
                 "driver": f"{driver.get('givenName', '')} {driver.get('familyName', '')}".strip(),
                 "constructor": constructor.get("name", ""),
                 "grid_pos": int(res["grid"]) if res["grid"].isdigit() else None,
                 "finish_pos": finish_pos,
                 "position_text": pos_text,
+                "status": res.get("status", ""),
+                "time_millis": float(millis) if millis else None,
                 "points_scored": float(res["points"]),
                 "got_win": 1 if pos_text == "1" else 0,
                 "dnf": dnf,
@@ -202,6 +254,7 @@ def fetch_race_results(season: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+@_shared_once_completed
 def fetch_sprint_points(season: int) -> pd.DataFrame:
     """Points each driver scored in each sprint. Race results leave these out."""
     rows = []
@@ -217,6 +270,7 @@ def fetch_sprint_points(season: int) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["round", "driver_code", "sprint_points"])
 
 
+@_shared_once_completed
 def fetch_driver_standings(season: int) -> pd.DataFrame:
     url = f"{API_BASE_URL}/{season}/driverStandings.json"
     data = _get_json(url)
@@ -249,3 +303,32 @@ def fetch_driver_standings(season: int) -> pd.DataFrame:
         })
 
     return pd.DataFrame(rows).sort_values("Position").reset_index(drop=True)
+
+
+@_shared_once_completed
+def fetch_constructor_standings(season: int) -> pd.DataFrame:
+    url = f"{API_BASE_URL}/{season}/constructorStandings.json"
+    data = _get_json(url)
+
+    try:
+        standings_list = data["MRData"]["StandingsTable"]["StandingsLists"]
+    except KeyError as exc:
+        raise UpstreamAPIError(f"Unexpected response shape from {url}: {exc}") from exc
+
+    columns = ["Position", "Constructor", "Points", "Wins"]
+    if not standings_list:
+        return pd.DataFrame(columns=columns)
+
+    rows = []
+    for entry in standings_list[0]["ConstructorStandings"]:
+        # An excluded constructor has no numeric position; it has no tier.
+        if not str(entry.get("position", "")).isdigit():
+            continue
+        rows.append({
+            "Position": int(entry["position"]),
+            "Constructor": entry["Constructor"].get("name", ""),
+            "Points": float(entry["points"]),
+            "Wins": int(entry["wins"]),
+        })
+
+    return pd.DataFrame(rows, columns=columns).sort_values("Position").reset_index(drop=True)

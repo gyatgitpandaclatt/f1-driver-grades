@@ -82,6 +82,20 @@ class QualH2HPair(BaseModel):
     races: int
 
 
+class ExcludedDriver(BaseModel):
+    driver_code: str
+    driver_name: str
+    races: int
+
+
+class ConstructorTier(BaseModel):
+    constructor: str
+    position: int
+    points: float
+    tier: float
+    tier_bonus: float
+
+
 class Meta(BaseModel):
     feature_importances: Optional[List[FeatureImportance]]
     predicted_vs_actual: List[PredictedVsActualPoint]
@@ -94,15 +108,29 @@ class Meta(BaseModel):
     # when nobody is left out.
     min_races_for_grade: Optional[int]
     qual_h2h_pairs: List[QualH2HPair]
+    # Drivers below that bar (stand-ins, part-timers), left out of the grades.
+    excluded_drivers: List[ExcludedDriver]
+    # Full prior seasons below which a driver counts as a rookie.
+    rookie_season_threshold: int
+    # This season's constructors' championship order and the tiers set from it.
+    constructor_tiers: List[ConstructorTier]
 
 
 class DriverGradesResponse(BaseModel):
     status: Literal["ok"]
     season: int
+    # False for a finished season, whose figures are final.
+    is_current_season: bool
     current_round: int
     last_updated: str
     drivers: List[DriverGrade]
     meta: Meta
+
+
+class SeasonsResponse(BaseModel):
+    current: int
+    # Newest first, the current season included.
+    seasons: List[int]
 
 
 class NoDataResponse(BaseModel):

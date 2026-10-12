@@ -5,6 +5,7 @@ import QualifyingH2HPage from "./pages/QualifyingH2HPage";
 import OverperformancePage from "./pages/OverperformancePage";
 import GridImprovementPage from "./pages/GridImprovementPage";
 import RaceSummaryPage from "./pages/RaceSummaryPage";
+import SeasonSummaryPage from "./pages/SeasonSummaryPage";
 import MethodologyPage from "./pages/MethodologyPage";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/overperformance" element={<OverperformancePage />} />
           <Route path="/grid-improvement" element={<GridImprovementPage />} />
           <Route path="/race-summary" element={<RaceSummaryPage />} />
+          <Route path="/season-summary" element={<SeasonSummaryPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />
         </Route>
       </Routes>

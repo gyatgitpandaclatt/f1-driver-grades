@@ -16,6 +16,12 @@ interface Props {
   // else renders as a muted, unlabeled line — a 20-color legend fights
   // itself, so only the drivers that matter for the story get identity.
   highlightDrivers: string[];
+  // The x-axis: laps for a race, rounds for a championship.
+  xKey?: string;
+  xLabel?: string;
+  yLabel?: string;
+  // Tooltip heading for an x value; defaults to e.g. "Lap 12".
+  describeX?: (x: number) => string;
 }
 
 const MUTED_STROKE = COLORS.text;
@@ -30,10 +36,12 @@ function PositionTooltip({
   active,
   payload,
   label,
+  describeX,
 }: {
   active?: boolean;
   payload?: TooltipPayloadEntry[];
   label?: number;
+  describeX: (x: number) => string;
 }) {
   if (!active || !payload?.length) return null;
   const rows = payload
@@ -51,7 +59,9 @@ function PositionTooltip({
         overflowY: "auto",
       }}
     >
-      <div style={{ color: COLORS.text, fontWeight: 600, marginBottom: 4 }}>Lap {label}</div>
+      <div style={{ color: COLORS.text, fontWeight: 600, marginBottom: 4 }}>
+        {label != null ? describeX(label) : ""}
+      </div>
       {rows.map((p) => (
         <div key={p.dataKey} style={{ color: COLORS.textSecondary, fontSize: 12 }}>
           P{p.value} — <span style={{ color: p.color }}>{p.dataKey}</span>
@@ -61,8 +71,19 @@ function PositionTooltip({
   );
 }
 
-export default function PositionChangesChart({ data, highlightDrivers }: Props) {
-  const allDrivers = Object.keys(data[0] ?? {}).filter((key) => key !== "lap");
+export default function PositionChangesChart({
+  data,
+  highlightDrivers,
+  xKey = "lap",
+  xLabel = "Lap",
+  yLabel = "Position",
+  describeX = (x) => `${xLabel} ${x}`,
+}: Props) {
+  // Every row, not just the first: a driver who joined partway through (a
+  // stand-in, in a season chart) has no entry until they do.
+  const allDrivers = [...new Set(data.flatMap((row) => Object.keys(row)))].filter(
+    (key) => key !== xKey,
+  );
   const highlighted = new Set(highlightDrivers);
   const maxPosition = allDrivers.length || 1;
 
@@ -72,10 +93,11 @@ export default function PositionChangesChart({ data, highlightDrivers }: Props) 
         <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
         <XAxis
           type="number"
-          dataKey="lap"
+          dataKey={xKey}
           domain={["dataMin", "dataMax"]}
+          allowDecimals={false}
           tick={{ fill: COLORS.textSecondary, fontSize: 12 }}
-          label={{ value: "Lap", position: "insideBottom", offset: -8, fill: COLORS.textSecondary }}
+          label={{ value: xLabel, position: "insideBottom", offset: -8, fill: COLORS.textSecondary }}
         />
         <YAxis
           type="number"
@@ -83,16 +105,17 @@ export default function PositionChangesChart({ data, highlightDrivers }: Props) 
           reversed
           allowDecimals={false}
           tick={{ fill: COLORS.textSecondary, fontSize: 12 }}
-          label={{ value: "Position", angle: -90, position: "insideLeft", fill: COLORS.textSecondary }}
+          label={{ value: yLabel, angle: -90, position: "insideLeft", fill: COLORS.textSecondary }}
         />
-        <Tooltip content={<PositionTooltip />} />
+        <Tooltip content={<PositionTooltip describeX={describeX} />} />
         <Legend
           payload={highlightDrivers.map((driver, i) => ({
             value: driver,
             type: "line",
             color: COLORS.categorical[i % COLORS.categorical.length],
           }))}
-          wrapperStyle={{ color: COLORS.text }}
+          // Clear of the x-axis label, which sits below the axis.
+          wrapperStyle={{ color: COLORS.text, paddingTop: 16 }}
         />
         {allDrivers.map((driver) => {
           const isHighlighted = highlighted.has(driver);

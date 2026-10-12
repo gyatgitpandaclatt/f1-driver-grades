@@ -1,8 +1,10 @@
-# F1 2026 Driver Grades
+# F1 Driver Grades
 
-Computes S/A/B/C/D letter grades for 2026 F1 drivers from live qualifying/race
+Computes S/A/B/C/D letter grades for F1 drivers from live qualifying/race
 results and standings, and displays them in a web UI with feature-importance
-and predicted-vs-actual charts.
+and predicted-vs-actual charts. The current season is live; a season selector
+at the right of the tabs switches every tab to one of the previous five
+seasons, where a Season Summary replaces the Race Summary.
 
 ## Prerequisites
 
@@ -120,11 +122,34 @@ docker run -p 8000:8000 -e GEMINI_API_KEY=... -e CEREBRAS_API_KEY=... f1-driver-
 
 ## Notes
 
-- `backend/app/config.py` holds season-specific settings (season year, rookie
-  driver codes, constructor tier map) — update these each new season.
+- Nothing needs updating each season. The current season is the calendar year,
+  and `PREVIOUS_SEASONS` in `backend/app/config.py` sets how far back the
+  season selector reaches (5). Rookies (fewer than `ROOKIE_SEASON_THRESHOLD`
+  full seasons behind them), constructor tiers (from that season's
+  constructors' championship order) and lineup changes (from the entry lists)
+  are all derived from the data; `config.py` only holds their thresholds.
+  `LINEUP_CHANGE_REASONS` there can optionally say *why* a lineup changed
+  (e.g. an injury), which the data never carries.
 - The backend caches computed results in memory (~20 min TTL) to avoid
   hammering the upstream API on every page load. Use the Refresh button in the
-  UI (or `POST /api/refresh`) to force a recompute.
+  UI (or `POST /api/refresh`) to force a recompute. A finished season never
+  changes, so its grades and season summary are computed the first time
+  someone opens it and then kept for the life of the process; the startup
+  warm only covers the current season.
+- Jolpica serves at most 100 rows a page and allows 500 requests an hour
+  unauthenticated. Opening a past season for the first time costs roughly
+  20–45 requests (its results, plus career lookups for rookies and career
+  firsts), which is why nothing season-wide reads lap data: a single race's
+  laps are ~12 requests.
+- The Season Summary page (`/season-summary?season=YYYY`, backed by
+  `backend/app/season_summary/`) is for finished seasons only: a quick summary,
+  championship position by round, a quarter-by-quarter analysis, the crucial
+  moments for the title (lead changes, points swings from wins and
+  retirements, close finishes between contenders, where the title was
+  decided) and beyond it (first wins and podiums outside the top five,
+  rookies' firsts, crucial midfield points), with part-time drivers as
+  footnotes. It is built from race results only — no lap data — and uses
+  the same narrative providers as the Race Summary below.
 - The Race Summary page (`/race-summary`, backed by `backend/app/race_summary/`)
   needs a `GEMINI_API_KEY` and/or `CEREBRAS_API_KEY` to write the race
   narrative (Gemini is tried first, Cerebras is the fallback; both have free

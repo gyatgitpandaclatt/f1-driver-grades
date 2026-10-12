@@ -2,12 +2,28 @@ class UpstreamAPIError(Exception):
     """Raised when the external F1 data provider is unreachable or returns bad data."""
 
 
-class NoRaceDataError(Exception):
+class _SeasonEmptyState(Exception):
+    """An empty state for one season, answered as "no data", not an error.
+
+    Carries the season it is about: with several seasons served, the API
+    edge can no longer assume the current one.
+    """
+
+    def __init__(self, message: str, season: int | None = None):
+        super().__init__(message)
+        self.season = season
+
+
+class NoRaceDataError(_SeasonEmptyState):
     """Raised when a season has zero completed races yet (e.g. preseason)."""
 
 
-class RaceSessionNotAvailableError(Exception):
+class RaceSessionNotAvailableError(_SeasonEmptyState):
     """Raised when the data provider has no results yet for the latest completed round."""
+
+
+class SeasonNotAvailableError(Exception):
+    """Raised when a request names a season outside config.available_seasons()."""
 
 
 class NarrativeGenerationError(Exception):
