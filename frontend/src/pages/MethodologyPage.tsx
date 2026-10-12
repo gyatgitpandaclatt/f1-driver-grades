@@ -22,8 +22,12 @@ function pct(part: number, total: number): string {
   return total > 0 ? `${((part / total) * 100).toFixed(0)}%` : "0%";
 }
 
+function pts(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 export default function MethodologyPage() {
-  const { drivers, meta, season, currentRound } = useLayoutData();
+  const { drivers, meta, season, currentRound, isCurrentSeason } = useLayoutData();
 
   const gradeCounts: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, D: 0 };
   const seasonLabelCounts: Record<string, number> = {
@@ -40,7 +44,12 @@ export default function MethodologyPage() {
     performance_label_distribution: raceDist,
     total_race_entries: totalRaces,
     min_races_for_grade: minRaces,
+    excluded_drivers: excluded,
+    rookie_season_threshold: rookieThreshold,
+    constructor_tiers: tiers,
   } = meta;
+  const rookies = drivers.filter((d) => d.is_rookie);
+  const standingsWhen = isCurrentSeason ? "standings so far" : "final standings";
   // From the graded drivers' own counts: totalRaces also holds the entries of
   // drivers below the minimum race count, who are not in `drivers`.
   const avgRacesPerDriver =
@@ -52,8 +61,10 @@ export default function MethodologyPage() {
     <div className="panel prose">
       <h2>Scoring Methodology</h2>
       <p className="caption">
-        Live snapshot: {season} season, through round {currentRound}, {drivers.length} drivers,{" "}
-        {totalRaces} total race entries.
+        {isCurrentSeason
+          ? `Live snapshot: ${season} season, through round ${currentRound}`
+          : `Final: the complete ${season} season, all ${currentRound} rounds`}
+        , {drivers.length} drivers, {totalRaces} total race entries.
       </p>
 
       <h3>Composite Score Components</h3>
@@ -107,14 +118,46 @@ export default function MethodologyPage() {
         </li>
         <li>
           <strong>Car Strength Tier Bonus</strong> (flat, 0–6) — rewards drivers in weaker
-          cars (Mercedes = 0, Cadillac/Aston Martin = +6) to offset the advantage of
-          driving a faster car.
+          cars to offset the advantage of driving a faster car. Each car&rsquo;s tier comes from
+          its team&rsquo;s place in the {season} constructors&rsquo; championship ({standingsWhen}):
+          P1 earns +0 and P9 or lower +6, as in the table below. A driver who changed teams
+          is scored on the car they raced most.
         </li>
         <li>
-          <strong>Rookie Bonus</strong> (flat +2) — applied only to drivers in their first
-          full F1 season.
+          <strong>Rookie Bonus</strong> (flat +2) — applied to drivers with fewer than{" "}
+          {rookieThreshold} full F1 {rookieThreshold === 1 ? "season" : "seasons"} behind them
+          before {season}. A season only counts as full if they started at least half its races,
+          so a reserve&rsquo;s stand-in outings don&rsquo;t use up their rookie year.{" "}
+          {rookies.length > 0
+            ? `${season} rookies: ${rookies.map((d) => d.driver_name).join(", ")}.`
+            : `No graded driver counts as a rookie in ${season}.`}
         </li>
       </ul>
+
+      {tiers.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Constructor</th>
+              <th>Points</th>
+              <th>Tier</th>
+              <th>Tier bonus</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tiers.map((t) => (
+              <tr key={t.constructor}>
+                <td>{t.position}</td>
+                <td>{t.constructor}</td>
+                <td>{pts(t.points)}</td>
+                <td>{t.tier}</td>
+                <td>+{t.tier_bonus}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <h3>Grade Boundaries</h3>
       <ul>
@@ -191,10 +234,17 @@ export default function MethodologyPage() {
 
       <h3>Limitations and Caveats</h3>
 
-      <p><strong>Temporal scope.</strong> This analysis is a midseason snapshot through round{" "}
-        {currentRound} of the {season} season. Rankings and grades may shift substantially in
-        the remaining rounds — any driver, particularly those in transitional roles or new to
-        the grid, may see grades change significantly as more data accumulates.</p>
+      {isCurrentSeason ? (
+        <p><strong>Temporal scope.</strong> This analysis is a midseason snapshot through round{" "}
+          {currentRound} of the {season} season. Rankings and grades may shift substantially in
+          the remaining rounds — any driver, particularly those in transitional roles or new to
+          the grid, may see grades change significantly as more data accumulates.</p>
+      ) : (
+        <p><strong>Temporal scope.</strong> This analysis covers the complete {season} season,
+          all {currentRound} rounds, so these grades are final. They are graded against the{" "}
+          {season} field only: a grade compares a driver with that season&rsquo;s grid, not with
+          other seasons.</p>
+      )}
 
       <p><strong>Minimum race count.</strong> Drivers who have started fewer than half of
         the season&rsquo;s races (never fewer than 2) are left out of the grades and the
@@ -211,7 +261,11 @@ export default function MethodologyPage() {
         the per-race label distribution below, and their teammate&rsquo;s points ratio and
         qualifying head-to-head score. The head-to-head page itself compares each pair of teammates only
         over the races they shared a car, and leaves out pairings shorter than that same bar,
-        such as a driver&rsquo;s short stint in another team&rsquo;s car.</p>
+        such as a driver&rsquo;s short stint in another team&rsquo;s car.
+        {excluded.length > 0 && (
+          <> Left out of the {season} grades:{" "}
+            {excluded.map((d) => `${d.driver_name} (${d.races} ${d.races === 1 ? "race" : "races"})`).join(", ")}.</>
+        )}</p>
 
       <p><strong>Sample size &amp; volatility.</strong> Only {drivers.length} drivers are graded,
         limiting the robustness of per-driver metrics. Drivers with fewer completed races
@@ -229,10 +283,11 @@ export default function MethodologyPage() {
         at ±8 positions to reduce outlier influence — an exceptional single-race result (e.g.
         gaining 15+ places from a low grid slot) is partially masked in the composite score.</p>
 
-      <p><strong>Constructor strength estimates.</strong> Constructor tier classifications are
-        fixed for the season and don't account for in-season car development. Teams with large
-        mid-season upgrades may invalidate the tier assumption, over- or under-penalizing their
-        drivers.</p>
+      <p><strong>Constructor strength estimates.</strong> Constructor tiers follow the
+        constructors&rsquo; championship ({standingsWhen}), which mixes car pace with driver
+        performance and doesn&rsquo;t account for in-season car development. Teams with large
+        mid-season upgrades may be over- or under-penalized by a single tier for the season
+        {isCurrentSeason ? ", and early in a season the order rests on only a handful of races" : ""}.</p>
 
       <p><strong>Machine learning generalization.</strong> The Random Forest and Logistic
         Regression models are trained on this season's small driver cohort via

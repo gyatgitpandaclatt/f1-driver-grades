@@ -15,34 +15,19 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from ..config import RACE_SUMMARY_LINEUP_NOTES, SEASON
 from ..data_fetch import fetch_race_results
 from ..exceptions import RaceSessionNotAvailableError
+from ..lineups import race_lineup_notes
 from . import events, features, ingestion, narrator
 
 
-def _latest_completed_round(season: int) -> int:
-    race_df = fetch_race_results(season)
-    if race_df.empty:
-        raise RaceSessionNotAvailableError(f"No completed races found for the {season} season yet.")
-    return int(race_df['round'].max())
-
-
-def _applicable_lineup_notes(entered: set[tuple[str, str]]) -> list[str]:
-    """Configured lineup notes whose driver/constructor pairing this race confirms.
-
-    Gated on everyone who *started*, not the final classification: a stand-in
-    who retired is dropped from the classification, and that is precisely the
-    race whose report most needs to explain who was in the car.
-    """
-    return [
-        note['note'] for note in RACE_SUMMARY_LINEUP_NOTES
-        if (note['driver_code'], note['constructor']) in entered
-    ]
-
-
-def run_race_summary_pipeline(season: int = SEASON) -> dict:
-    round_number = _latest_completed_round(season)
+def run_race_summary_pipeline(season: int) -> dict:
+    # The season so far, not just this race: it finds the latest round, and
+    # says who started the season in which seat for the lineup notes.
+    season_results = fetch_race_results(season)
+    if season_results.empty:
+        raise RaceSessionNotAvailableError(f"No completed races found for the {season} season yet.", season=season)
+    round_number = int(season_results['round'].max())
 
     race_data = ingestion.fetch_race_data(season, round_number)
     event = race_data['event']
@@ -89,10 +74,7 @@ def run_race_summary_pipeline(season: int = SEASON) -> dict:
     # race report walks through them.
     retirements.sort(key=lambda entry: entry['laps_completed'])
 
-    lineup_notes = _applicable_lineup_notes({
-        (code, driver_id_to_constructor[driver_id])
-        for driver_id, code in driver_id_to_code.items()
-    })
+    lineup_notes = race_lineup_notes(season_results, season, round_number)
 
     laps = race_data['laps']
     pit_stops_raw = race_data['pit_stops']

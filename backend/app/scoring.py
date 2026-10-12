@@ -1,7 +1,45 @@
 import numpy as np
 import pandas as pd
 
-from .config import CONSTRUCTOR_TIER, DEFAULT_CONSTRUCTOR_TIER, DEFAULT_TIER_BONUS, TIER_BONUS
+from .config import (
+    CONSTRUCTOR_TIER_BY_POSITION,
+    DEFAULT_CONSTRUCTOR_TIER,
+    DEFAULT_TIER_BONUS,
+    LOWEST_CONSTRUCTOR_TIER,
+    TIER_BONUS,
+)
+
+
+def tier_for_position(position: int) -> float:
+    for last_position, tier in CONSTRUCTOR_TIER_BY_POSITION:
+        if position <= last_position:
+            return tier
+    return LOWEST_CONSTRUCTOR_TIER
+
+
+def constructor_tiers(constructor_standings_df: pd.DataFrame) -> pd.DataFrame:
+    """Each constructor's car tier and tier bonus, from its championship position."""
+    tiers = constructor_standings_df[["Position", "Constructor", "Points"]].copy()
+    tiers["tier"] = tiers["Position"].map(tier_for_position).astype(float)
+    tiers["tier_bonus"] = tiers["tier"].map(TIER_BONUS).fillna(DEFAULT_TIER_BONUS).astype(float)
+    return tiers
+
+
+def primary_constructors(race_df: pd.DataFrame) -> pd.DataFrame:
+    """The constructor each driver raced for most this season (the latest on a tie).
+
+    The standings feed lists a driver's constructors in the order they drove
+    for them, so its first entry is wherever they started the season — for a
+    driver moved between teams after two races, the team they barely drove
+    for.
+    """
+    counts = (
+        race_df.groupby(["driver_code", "constructor"])["round"]
+        .agg(races="nunique", last_round="max")
+        .reset_index()
+        .sort_values(["driver_code", "races", "last_round"], ascending=[True, False, False])
+    )
+    return counts.drop_duplicates("driver_code")[["driver_code", "constructor"]]
 
 
 def compute_qual_stats(merged_df: pd.DataFrame) -> pd.DataFrame:
@@ -135,10 +173,12 @@ def compute_composite_scores(
     standings_df: pd.DataFrame,
     qual_stats_df: pd.DataFrame,
     teammate_df: pd.DataFrame,
+    primary_constructor_df: pd.DataFrame,
+    tiers_df: pd.DataFrame,
 ) -> pd.DataFrame:
     code_to_name = standings_df.set_index("Driver Code")["Driver"].to_dict()
 
-    standings_small = standings_df[["Driver Code", "Points", "Position", "Wins", "Constructor"]].rename(
+    standings_small = standings_df[["Driver Code", "Points", "Position", "Wins"]].rename(
         columns={"Driver Code": "driver_code"}
     )
 
@@ -146,6 +186,9 @@ def compute_composite_scores(
         "driver_code", "races", "avg_finish_minus_grid", "overperf_share", "underperf_share",
         "is_rookie", "season_label", "rf_pred_label", "lr_pred_label",
     ]].merge(standings_small, on="driver_code")
+    df = df.merge(
+        primary_constructor_df.rename(columns={"constructor": "Constructor"}), on="driver_code", how="left"
+    )
 
     df["driver_name"] = df["driver_code"].map(code_to_name).fillna(df["driver_code"])
     df = df.merge(qual_stats_df, on="driver_code", how="left")
@@ -155,7 +198,9 @@ def compute_composite_scores(
     df["qual_h2h_wins"] = df["qual_h2h_wins"].fillna(0).astype(int)
     df["qual_h2h_races"] = df["qual_h2h_races"].fillna(0).astype(int)
 
-    df["car_tier"] = df["Constructor"].map(CONSTRUCTOR_TIER).fillna(DEFAULT_CONSTRUCTOR_TIER)
+    df["car_tier"] = (
+        df["Constructor"].map(tiers_df.set_index("Constructor")["tier"]).fillna(DEFAULT_CONSTRUCTOR_TIER)
+    )
 
     df = df.merge(teammate_df, on="driver_code", how="left")
     df["teammate_pts_ratio"] = df["teammate_pts_ratio"].fillna(0.5)

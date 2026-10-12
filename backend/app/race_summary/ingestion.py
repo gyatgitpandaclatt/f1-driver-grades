@@ -102,7 +102,7 @@ def fetch_race_event(season: int, round_number: int) -> dict:
 
     if not races:
         raise RaceSessionNotAvailableError(
-            f"No classified results yet for {season} round {round_number}."
+            f"No classified results yet for {season} round {round_number}.", season=season
         )
     return races[0]
 

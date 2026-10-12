@@ -81,6 +81,24 @@ export interface QualH2HPair {
   races: number;
 }
 
+// A driver below the race-count bar (a stand-in, a part-timer), left out of
+// the grades.
+export interface ExcludedDriver {
+  driver_code: string;
+  driver_name: string;
+  races: number;
+}
+
+// A constructor's place in that season's constructors' championship, and the
+// car tier and tier bonus set from it.
+export interface ConstructorTier {
+  constructor: string;
+  position: number;
+  points: number;
+  tier: number;
+  tier_bonus: number;
+}
+
 export interface Meta {
   feature_importances: FeatureImportance[] | null;
   predicted_vs_actual: PredictedVsActualPoint[];
@@ -92,15 +110,23 @@ export interface Meta {
   // null until anyone clears the bar, when nobody is left out.
   min_races_for_grade: number | null;
   qual_h2h_pairs: QualH2HPair[];
+  excluded_drivers: ExcludedDriver[];
+  // Full prior seasons below which a driver counts as a rookie.
+  rookie_season_threshold: number;
+  constructor_tiers: ConstructorTier[];
 }
 
 export interface DriverGradesResponse {
   status: "ok";
   season: number;
+  // False for a finished season, whose figures are final.
+  is_current_season: boolean;
   current_round: number;
   last_updated: string;
   drivers: DriverGrade[];
   meta: Meta;
+  // Served from a saved snapshot of a finished season.
+  snapshot: boolean;
 }
 
 export interface NoDataResponse {
@@ -130,6 +156,14 @@ export interface BusyResponse {
   retry_after: number;
   message: string;
 }
+
+export interface SeasonsResponse {
+  current: number;
+  // Newest first, the current season included.
+  seasons: number[];
+}
+
+export type SeasonsApiResult = SeasonsResponse | ErrorResponse;
 
 export type DriverGradesApiResult =
   | DriverGradesResponse
@@ -215,6 +249,166 @@ export interface RaceSummaryResponse {
 
 export type RaceSummaryApiResult =
   | RaceSummaryResponse
+  | NoDataResponse
+  | BusyResponse
+  | UnavailableResponse
+  | ErrorResponse;
+
+// --- Season Summary ---
+// Mirrors backend/app/season_summary/models.py field-for-field. Keep in sync.
+
+export interface StandingEntry {
+  position: number;
+  driver_code: string;
+  driver_name: string;
+  constructor: string;
+  points: number;
+  wins: number;
+  podiums: number;
+  dnfs: number;
+  races: number;
+  part_time: boolean;
+}
+
+export interface ConstructorStanding {
+  position: number;
+  constructor: string;
+  points: number;
+  wins: number;
+}
+
+export interface RaceResultSummary {
+  round: number;
+  race_name: string;
+  winner: string;
+  podium: string[];
+}
+
+export interface DriverPoints {
+  driver_code: string;
+  points: number;
+}
+
+export interface DriverWins {
+  driver_code: string;
+  wins: number;
+}
+
+export interface Quarter {
+  label: string;
+  first_round: number;
+  last_round: number;
+  first_race: string;
+  last_race: string;
+  leader_at_start: string | null;
+  leader: string;
+  leader_points: number;
+  runner_up: string | null;
+  margin: number | null;
+  lead_changes: number;
+  top_scorers: DriverPoints[];
+  winners: DriverWins[];
+}
+
+export interface Moment {
+  round: number;
+  race_name: string;
+  kinds: string[];
+  // Built from the data by the backend, not by the narrative model.
+  headline: string;
+  drivers: string[];
+}
+
+export interface Stint {
+  constructor: string;
+  rounds: number[];
+}
+
+export interface PartTimeDriver {
+  driver_code: string;
+  driver_name: string;
+  races: number;
+  points: number;
+  best_finish: number | null;
+  stints: Stint[];
+  in_place_of: string[];
+  highlights: string[];
+  summary: string;
+}
+
+export interface LineupChange {
+  round: number;
+  race_name: string;
+  constructor: string;
+  driver_in: string | null;
+  driver_out: string | null;
+}
+
+export interface TitleDecided {
+  round: number;
+  race_name: string;
+  driver_code: string;
+  rounds_left: number;
+}
+
+export interface Champion {
+  driver_code: string;
+  driver_name: string;
+  constructor: string;
+  points: number;
+}
+
+export interface SeasonSummarySections {
+  summary: string;
+  championship_progression: string;
+  quarterly_analysis: string;
+  championship_moments: string;
+  other_moments: string;
+  driver_of_the_season: string;
+}
+
+export interface RoundLabel {
+  round: number;
+  race_name: string;
+}
+
+export interface SeasonSummaryChartData {
+  // Each row is {round: N, <driver_code>: championship position, ...}
+  standings_series: Record<string, number>[];
+  rounds: RoundLabel[];
+  highlight_drivers: string[];
+}
+
+export interface SeasonSummaryContext {
+  season: number;
+  rounds: number;
+  final_standings: StandingEntry[];
+  constructor_standings: ConstructorStanding[];
+  races: RaceResultSummary[];
+  quarters: Quarter[];
+  title_decided: TitleDecided;
+  championship_moments: Moment[];
+  other_moments: Moment[];
+  part_time_drivers: PartTimeDriver[];
+  lineup_changes: LineupChange[];
+  rookies: string[];
+}
+
+export interface SeasonSummaryResponse {
+  status: "ok";
+  season: number;
+  rounds: number;
+  champion: Champion;
+  last_updated: string;
+  sections: SeasonSummarySections;
+  context: SeasonSummaryContext;
+  charts: SeasonSummaryChartData;
+  // Served from a saved snapshot: refreshing can't change it.
+  snapshot: boolean;
+}
+
+export type SeasonSummaryApiResult =
+  | SeasonSummaryResponse
   | NoDataResponse
   | BusyResponse
   | UnavailableResponse

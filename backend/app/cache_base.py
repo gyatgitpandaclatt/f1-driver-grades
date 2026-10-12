@@ -1,5 +1,6 @@
 """
-Shared TTL cache used by both the driver-grades and race-summary caches.
+Shared TTL cache used by the driver-grades, race-summary and season-summary
+caches.
 
 The important property beyond the TTL is single-flight: only one thread ever
 runs the (slow, upstream/LLM-bound) compute for a given cache, and everyone
@@ -8,9 +9,12 @@ pipelines — React StrictMode mounts effects twice in dev, so the frontend
 issues two identical requests, and each used to miss the cache independently.
 """
 import logging
+import math
 import threading
 import time
 from typing import Callable
+
+from .config import is_completed_season
 
 logger = logging.getLogger("f1_driver_grades")
 
@@ -84,3 +88,44 @@ class TTLCache:
             )
             return
         logger.info("Startup warm of %s finished in %.1fs", self._name, time.monotonic() - started)
+
+
+class SeasonCache:
+    """One TTLCache per season, each with its own single-flight lock.
+
+    The current season's entry expires after `ttl_seconds`, as before. A
+    finished season never changes, so its entry is kept for the life of the
+    process: recomputing it would re-spend the upstream requests (and, for a
+    season summary, an LLM call) only to produce the same answer. The API
+    only accepts config.available_seasons(), so the number of entries stays
+    small.
+
+    A season's TTL is fixed when its entry is first made, so the season that
+    was current when the year turned keeps its short TTL until restart.
+    That only costs an occasional recompute of a result that is still right.
+    """
+
+    def __init__(self, compute: Callable[[int], dict], ttl_seconds: float, name: str = "cache"):
+        self._compute = compute
+        self._ttl = ttl_seconds
+        self._name = name
+        self._lock = threading.Lock()
+        self._caches: dict[int, TTLCache] = {}
+
+    def _cache_for(self, season: int) -> TTLCache:
+        with self._lock:
+            cache = self._caches.get(season)
+            if cache is None:
+                ttl = math.inf if is_completed_season(season) else self._ttl
+                cache = TTLCache(self._compute, ttl, name=f"{self._name} {season}")
+                self._caches[season] = cache
+            return cache
+
+    def get_or_compute(self, season: int) -> dict:
+        return self._cache_for(season).get_or_compute(season)
+
+    def force_refresh(self, season: int) -> dict:
+        return self._cache_for(season).force_refresh(season)
+
+    def try_warm(self, season: int) -> None:
+        self._cache_for(season).try_warm(season)

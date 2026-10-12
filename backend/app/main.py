@@ -9,18 +9,21 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import cache
-from .config import SEASON
+from .config import available_seasons, current_season
 from .exceptions import (
     NarrativeGenerationError,
     NarrativeUnavailableError,
     NoRaceDataError,
     RaceSessionNotAvailableError,
+    SeasonNotAvailableError,
     UpstreamAPIError,
     UpstreamRateLimitedError,
 )
 from .race_summary import cache as race_summary_cache
 from .race_summary.models import RaceSummaryResponse
-from .schemas import DriverGradesResponse
+from .schemas import DriverGradesResponse, SeasonsResponse
+from .season_summary import cache as season_summary_cache
+from .season_summary.models import SeasonSummaryResponse
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -53,7 +56,15 @@ async def no_race_data_handler(request: Request, exc: NoRaceDataError):
     # can branch on, not an error status code.
     return JSONResponse(status_code=200, content={
         "status": "no_data",
-        "season": SEASON,
+        "season": exc.season if exc.season is not None else current_season(),
+        "message": str(exc),
+    })
+
+
+@app.exception_handler(SeasonNotAvailableError)
+async def season_not_available_handler(request: Request, exc: SeasonNotAvailableError):
+    return JSONResponse(status_code=404, content={
+        "status": "error",
         "message": str(exc),
     })
 
@@ -94,7 +105,7 @@ async def race_session_not_available_handler(request: Request, exc: RaceSessionN
     # server fault.
     return JSONResponse(status_code=200, content={
         "status": "no_data",
-        "season": SEASON,
+        "season": exc.season if exc.season is not None else current_season(),
         "message": str(exc),
     })
 
@@ -109,7 +120,7 @@ async def narrative_unavailable_handler(request: Request, exc: NarrativeUnavaila
     return JSONResponse(status_code=503, content={
         "status": "unavailable",
         "message": (
-            "The race narrative is unavailable right now. This one needs "
+            "The AI-written summary is unavailable right now. This one needs "
             "attention from the site owner — retrying will not bring it back."
         ),
     })
@@ -120,7 +131,7 @@ async def narrative_generation_error_handler(request: Request, exc: NarrativeGen
     logger.warning("Narrative generation error: %s", exc)
     return JSONResponse(status_code=502, content={
         "status": "error",
-        "message": "Could not generate the race narrative. Please try again shortly.",
+        "message": "Could not generate the AI-written summary. Please try again shortly.",
     })
 
 
@@ -138,9 +149,15 @@ def _warm_caches() -> None:
     # which is the slow one: a run of upstream pages plus an LLM call. Warm
     # it here so the first visitor to /race-summary reads a cache instead of
     # waiting out the whole pipeline.
-    logger.info("Startup warm beginning for season %s", SEASON)
-    cache.try_warm_cache(SEASON)
-    race_summary_cache.try_warm_cache(SEASON)
+    #
+    # Current season only. Warming every previous season too would spend a
+    # few hundred upstream requests (against a 500/hour limit) and five LLM
+    # calls on every cold start, for pages few visits open; each is computed
+    # on first view instead and then kept for the life of the process.
+    season = current_season()
+    logger.info("Startup warm beginning for season %s", season)
+    cache.try_warm_cache(season)
+    race_summary_cache.try_warm_cache(season)
     logger.info("Startup warm done")
 
 
@@ -157,24 +174,54 @@ async def health():
     return {"status": "ok"}
 
 
+def _requested_season(season: int | None) -> int:
+    """The season a request asks for (the current one when unspecified)."""
+    if season is None:
+        return current_season()
+    seasons = available_seasons()
+    if season not in seasons:
+        raise SeasonNotAvailableError(
+            f"The {season} season isn't available. Choose one of: "
+            + ", ".join(str(s) for s in seasons) + "."
+        )
+    return season
+
+
+@app.get("/api/seasons", response_model=SeasonsResponse)
+async def get_seasons():
+    return {"current": current_season(), "seasons": available_seasons()}
+
+
 @app.get("/api/driver-grades", response_model=DriverGradesResponse)
-async def get_driver_grades():
-    return await run_in_threadpool(cache.get_or_compute, SEASON)
+async def get_driver_grades(season: int | None = None):
+    return await run_in_threadpool(cache.get_or_compute, _requested_season(season))
 
 
 @app.post("/api/refresh", response_model=DriverGradesResponse)
-async def refresh_driver_grades():
-    return await run_in_threadpool(cache.force_refresh, SEASON)
+async def refresh_driver_grades(season: int | None = None):
+    return await run_in_threadpool(cache.force_refresh, _requested_season(season))
 
 
+# The race summary covers the current season's latest race; a finished season
+# has the season summary instead.
 @app.get("/api/race-summary", response_model=RaceSummaryResponse)
 async def get_race_summary():
-    return await run_in_threadpool(race_summary_cache.get_or_compute, SEASON)
+    return await run_in_threadpool(race_summary_cache.get_or_compute, current_season())
 
 
 @app.post("/api/race-summary/refresh", response_model=RaceSummaryResponse)
 async def refresh_race_summary():
-    return await run_in_threadpool(race_summary_cache.force_refresh, SEASON)
+    return await run_in_threadpool(race_summary_cache.force_refresh, current_season())
+
+
+@app.get("/api/season-summary", response_model=SeasonSummaryResponse)
+async def get_season_summary(season: int | None = None):
+    return await run_in_threadpool(season_summary_cache.get_or_compute, _requested_season(season))
+
+
+@app.post("/api/season-summary/refresh", response_model=SeasonSummaryResponse)
+async def refresh_season_summary(season: int | None = None):
+    return await run_in_threadpool(season_summary_cache.force_refresh, _requested_season(season))
 
 
 # Serve the built frontend (frontend/dist, produced by `npm run build`) so

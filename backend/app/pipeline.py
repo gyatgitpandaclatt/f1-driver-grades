@@ -8,8 +8,10 @@ from .aggregate import (
     filter_gradeable_drivers,
     min_races_for_grade,
 )
-from .config import SEASON
+from .career import rookie_codes
+from .config import ROOKIE_SEASON_THRESHOLD, current_season
 from .data_fetch import (
+    fetch_constructor_standings,
     fetch_driver_standings,
     fetch_qualifying_results,
     fetch_race_results,
@@ -23,6 +25,8 @@ from .scoring import (
     compute_qual_h2h_pairs,
     compute_qual_stats,
     compute_teammate_pts_ratio,
+    constructor_tiers,
+    primary_constructors,
 )
 
 
@@ -64,23 +68,23 @@ def _row_to_driver_dict(row: pd.Series) -> dict:
     }
 
 
-def run_pipeline(season: int = SEASON) -> dict:
+def run_pipeline(season: int) -> dict:
     qual_df = fetch_qualifying_results(season)
     race_df = fetch_race_results(season)
 
     if race_df.empty:
-        raise NoRaceDataError(f"No completed races found for the {season} season yet.")
+        raise NoRaceDataError(f"No completed races found for the {season} season yet.", season=season)
 
     merged_df = merge_qualifying_and_race(qual_df, race_df)
     features_df = engineer_features(merged_df)
     model_df = build_target(features_df)
 
-    driver_season_df = build_driver_season_table(model_df)
+    entrants_df = build_driver_season_table(model_df, rookie_codes(season, race_df))
     # Before labelling or modelling: a one-race stand-in is noise to train on
     # and would stretch the score normalisation the rest of the grid is
     # measured against.
     driver_season_df, min_races = filter_gradeable_drivers(
-        driver_season_df, min_races_for_grade(int(model_df["round"].nunique()))
+        entrants_df, min_races_for_grade(int(model_df["round"].nunique()))
     )
     season_labeled_df = assign_season_label(driver_season_df)
 
@@ -89,8 +93,11 @@ def run_pipeline(season: int = SEASON) -> dict:
     standings_df = fetch_driver_standings(season)
     qual_stats_df = compute_qual_stats(merged_df)
     teammate_df = compute_teammate_pts_ratio(race_df, fetch_sprint_points(season))
+    tiers_df = constructor_tiers(fetch_constructor_standings(season))
 
-    final_df = compute_composite_scores(season_labeled_df, standings_df, qual_stats_df, teammate_df)
+    final_df = compute_composite_scores(
+        season_labeled_df, standings_df, qual_stats_df, teammate_df, primary_constructors(race_df), tiers_df
+    )
     qual_h2h_pairs = compute_qual_h2h_pairs(merged_df, final_df["driver_code"], min_races)
 
     drivers = [_row_to_driver_dict(row) for _, row in final_df.iterrows()]
@@ -128,9 +135,21 @@ def run_pipeline(season: int = SEASON) -> dict:
         str(k): int(v) for k, v in model_df["performance_label"].value_counts().items()
     }
 
+    names = race_df.drop_duplicates("driver_code").set_index("driver_code")["driver"]
+    excluded_df = entrants_df[~entrants_df["driver_code"].isin(final_df["driver_code"])]
+    excluded_drivers = [
+        {
+            "driver_code": row.driver_code,
+            "driver_name": names.get(row.driver_code, row.driver_code),
+            "races": int(row.races),
+        }
+        for row in excluded_df.sort_values("races", ascending=False).itertuples()
+    ]
+
     return {
         "status": "ok",
         "season": season,
+        "is_current_season": season == current_season(),
         "current_round": int(race_df["round"].max()),
         "last_updated": datetime.now(timezone.utc).isoformat(),
         "drivers": drivers,
@@ -144,5 +163,17 @@ def run_pipeline(season: int = SEASON) -> dict:
             "total_race_entries": int(len(model_df)),
             "min_races_for_grade": min_races,
             "qual_h2h_pairs": qual_h2h_pairs,
+            "excluded_drivers": excluded_drivers,
+            "rookie_season_threshold": ROOKIE_SEASON_THRESHOLD,
+            "constructor_tiers": [
+                {
+                    "constructor": row.Constructor,
+                    "position": int(row.Position),
+                    "points": float(row.Points),
+                    "tier": float(row.tier),
+                    "tier_bonus": float(row.tier_bonus),
+                }
+                for row in tiers_df.itertuples()
+            ],
         },
     }

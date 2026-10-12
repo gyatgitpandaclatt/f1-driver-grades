@@ -2,10 +2,10 @@ import math
 
 import pandas as pd
 
-from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE, ROOKIES
+from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE
 
 
-def build_driver_season_table(model_df: pd.DataFrame) -> pd.DataFrame:
+def build_driver_season_table(model_df: pd.DataFrame, rookies: set[str]) -> pd.DataFrame:
     driver_season_df = (
         model_df.groupby("driver_code")
         .agg(
@@ -16,7 +16,7 @@ def build_driver_season_table(model_df: pd.DataFrame) -> pd.DataFrame:
         )
         .reset_index()
     )
-    driver_season_df["is_rookie"] = driver_season_df["driver_code"].isin(ROOKIES).astype(int)
+    driver_season_df["is_rookie"] = driver_season_df["driver_code"].isin(rookies).astype(int)
     return driver_season_df
 
 

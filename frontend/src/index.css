@@ -103,6 +103,48 @@ a {
   box-shadow: 0 0 8px var(--glow);
 }
 
+/* ── SEASON SELECTOR (far right of the nav) ── */
+.season-selector {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 6px 12px;
+}
+
+.season-selector-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.season-selector select {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-bright);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.season-selector select:hover:not(:disabled),
+.season-selector select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--glow);
+  outline: none;
+}
+
+.season-selector select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ── H2H ── */
 .h2h-pair {
   padding: 10px;
@@ -485,6 +527,73 @@ tbody tr:nth-child(even):hover {
 .narrative-section p,
 .narrative-section li {
   color: var(--text);
+}
+
+/* ── SEASON SUMMARY ── */
+td.wrap {
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.moments-table {
+  margin-bottom: 18px;
+}
+
+.moment-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+
+.moment-tag {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-bright);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.moment-tag.title_decided,
+.moment-tag.lead_change {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent-dim);
+}
+
+.moment-tag.first_win,
+.moment-tag.first_podium,
+.moment-tag.rookie_first_points {
+  border-color: var(--correct);
+  color: var(--correct);
+}
+
+.footnotes {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 12px;
+}
+
+.footnotes h4 {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+}
+
+.footnotes .caption {
+  margin-top: 0;
+}
+
+.footnotes ol {
+  font-size: 0.82rem;
 }
 
 /* ── STAT TILES ── */

@@ -1,9 +1,32 @@
-#
-# SEASON-SPECIFIC — UPDATE EACH YEAR
-SEASON = 2026
+from datetime import datetime, timezone
 
-# Driver codes for drivers in their first full F1 season this year.
-ROOKIES = {"LIN"}
+# SEASONS — LIVE, NOTHING TO UPDATE EACH YEAR
+#
+# The current season is the calendar year. Before a year's first race it has
+# no completed rounds, which the API already answers as a "no data yet" empty
+# state, and the previous seasons stay one click away in the season selector.
+#
+# PREVIOUS_SEASONS is how far back the selector reaches. Each finished season
+# costs a few dozen upstream requests the first time it is opened (then it is
+# kept for the life of the process — see cache_base.SeasonCache), so widening
+# the window is cheap until someone opens the older seasons.
+PREVIOUS_SEASONS = 5
+
+
+def current_season() -> int:
+    return datetime.now(timezone.utc).year
+
+
+def available_seasons() -> list[int]:
+    """The seasons the API serves, newest first: this year and the previous ones."""
+    current = current_season()
+    return list(range(current, current - PREVIOUS_SEASONS - 1, -1))
+
+
+def is_completed_season(season: int) -> bool:
+    """A season before this year is over: its results will never change."""
+    return season < current_season()
+
 
 # Drivers who started fewer than this share of the season's completed rounds
 # are left out of the grades, and never anyone with fewer than
@@ -16,21 +39,32 @@ ROOKIES = {"LIN"}
 MIN_RACE_SHARE_FOR_GRADE = 0.5
 MIN_RACES_FOR_GRADE = 2
 
-# Lower tier number = stronger car. Unlisted constructors default to
-# DEFAULT_CONSTRUCTOR_TIER below.
-CONSTRUCTOR_TIER = {
-    "Mercedes": 1,
-    "Ferrari": 1.5,
-    "McLaren": 2,
-    "Red Bull": 2,
-    "Alpine F1 Team": 2.5,
-    "RB F1 Team": 2.5,
-    "Haas F1 Team": 3,
-    "Williams": 3,
-    "Audi": 3,
-    "Aston Martin": 4,
-    "Cadillac F1 Team": 4,
-}
+# A driver is a rookie until they have ROOKIE_SEASON_THRESHOLD full seasons
+# behind them, counted from their career before the season being graded. A
+# season only counts as full if they started at least
+# ROOKIE_FULL_SEASON_RACE_SHARE of its races — the same bar as being graded —
+# so a reserve's stand-in outings don't use up their rookie year: a driver
+# who subbed for three races last year and races full-time this year is
+# still a rookie. Raise the threshold to 2 to count second-year drivers too.
+ROOKIE_SEASON_THRESHOLD = 1
+ROOKIE_FULL_SEASON_RACE_SHARE = MIN_RACE_SHARE_FOR_GRADE
+
+# Lower tier number = stronger car. A constructor's tier comes from where it
+# sits in that season's constructors' championship (the final order for a
+# finished season, the order so far for the current one), so it updates by
+# itself every season and every round. Each entry is (lowest championship
+# position, tier): P1 is tier 1, P2 tier 1.5, P3-P4 tier 2, and so on;
+# anyone below the last entry is LOWEST_CONSTRUCTOR_TIER. Early in a season
+# the order rests on a handful of races, so expect tiers to move.
+CONSTRUCTOR_TIER_BY_POSITION = [
+    (1, 1),
+    (2, 1.5),
+    (4, 2),
+    (6, 2.5),
+    (8, 3),
+]
+LOWEST_CONSTRUCTOR_TIER = 4
+# For a constructor missing from the standings altogether.
 DEFAULT_CONSTRUCTOR_TIER = 2
 
 TIER_BONUS = {1: 0, 1.5: 1, 2: 2, 2.5: 3, 3: 4, 4: 6}
@@ -49,9 +83,11 @@ API_BASE_URL = "https://api.jolpi.ca/ergast/f1"
 CACHE_TTL_SECONDS = 20 * 60
 REQUEST_TIMEOUT = 10
 
-# Jolpica's documented maximum page size. A race's laps.json is ~20 drivers x
-# ~60 laps = ~1200 timing rows, so at the old limit of 100 a single race cost
-# ~12 sequential round trips; at 1000 it costs 2.
+# Jolpica documents a maximum page size of 100 and silently caps anything
+# larger, which the paginators handle by striding by the rows they actually
+# received. So a race's laps.json (~20 drivers x ~60 laps = ~1200 timing
+# rows) still costs ~12 round trips, and a season's results ~5. Combined with
+# the 500 requests/hour limit, that is why nothing season-wide reads lap data.
 PAGE_LIMIT = 1000
 
 # Upstream politeness/resilience: Jolpica rate-limits unauthenticated callers
@@ -97,25 +133,51 @@ CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
 # a wedged call from pinning the cache's single-flight lock.
 NARRATIVE_TIMEOUT_SECONDS = 180.0
 
-# Lineup facts the data provider does not carry. Ergast/Jolpica records which
-# car a driver drove, but never *why* a lineup changed, and a race report that
-# cannot explain a stand-in reads as if it missed the story.
+# Lineup changes (stand-ins, swaps, mid-season replacements) are detected
+# from the entry lists by app/lineups.py, for every season, with nothing to
+# maintain here: a race report is told who drove for whom and whose seat
+# they were in, and the season summary footnotes every part-time driver.
 #
-# A note is handed to the narrator only when that race's own classification
-# shows the driver in that constructor, so it cannot leak into a race the
-# substitution does not apply to, and it stops appearing by itself once the
-# regular driver is back. Race summary only — the grades pipeline never reads
-# this.
-#
-# Revisit a note if the same pairing recurs for a different reason: the
-# pairing is what is matched, the stated reason is not verified.
-RACE_SUMMARY_LINEUP_NOTES = [
+# What the data can never say is *why* a lineup changed. These optional
+# reasons fill that in. A reason is attached only when that season's own
+# entry list shows the driver at that constructor, so it cannot leak into a
+# season or a race it does not apply to. The stated reason is not verified;
+# only the pairing is matched.
+LINEUP_CHANGE_REASONS = [
     {
+        "season": 2026,
         "driver_code": "LAW",
         "constructor": "Red Bull",
-        "note": (
-            "Liam Lawson drove for Red Bull in this race, standing in for "
-            "Isack Hadjar, who was injured."
-        ),
+        "reason": "Lawson was standing in for Isack Hadjar, who was injured.",
     },
 ]
+
+# Season summarizer (finished seasons only; the current one has the race
+# summary). See season_summary/ for how each threshold is used.
+#
+# Title contenders: the top N of the championship going into a round (for
+# round 1, the season's final top N). Their points swings and close finishes
+# are the championship's crucial moments.
+SEASON_SUMMARY_TITLE_CONTENDERS = 3
+# Points gained on a rival in one weekend (race + sprint) that count as a
+# swing, when they come from the gainer winning or the rival retiring: a win
+# against a rival's P5, or any retirement against a podium.
+SEASON_SUMMARY_SWING_MIN_POINTS = 15
+# Two contenders finishing next to each other within this many seconds were
+# fighting to the flag. There's no lap data season-wide (see PAGE_LIMIT), so
+# this — from the finishing times — is how a battle is recognised.
+SEASON_SUMMARY_CLOSE_FINISH_SECONDS = 3.0
+# Drivers outside this top N of the final championship count as
+# "non-championship" drivers, whose wins and first podiums are moments.
+SEASON_SUMMARY_CHAMPIONSHIP_DRIVERS = 5
+# Constructors from this championship position down are the midfield and
+# backmarkers, whose points can be crucial.
+SEASON_SUMMARY_MIDFIELD_FROM_POSITION = 5
+# A weekend's points are crucial for such a team when they are at least this
+# share of its season total, or its first points after a pointless first
+# quarter of the season.
+SEASON_SUMMARY_CRUCIAL_POINTS_SHARE = 0.25
+# Caps on what the narrator is handed, to keep the prompt inside Cerebras'
+# small free-tier context.
+SEASON_SUMMARY_MAX_TITLE_MOMENTS = 12
+SEASON_SUMMARY_MAX_OTHER_MOMENTS = 15
