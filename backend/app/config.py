@@ -6,11 +6,24 @@ from datetime import datetime, timezone
 # no completed rounds, which the API already answers as a "no data yet" empty
 # state, and the previous seasons stay one click away in the season selector.
 #
-# PREVIOUS_SEASONS is how far back the selector reaches. Each finished season
-# costs a few dozen upstream requests the first time it is opened (then it is
-# kept for the life of the process — see cache_base.SeasonCache), so widening
-# the window is cheap until someone opens the older seasons.
-PREVIOUS_SEASONS = 5
+# FIRST_SEASON is how far back the selector reaches: every season Jolpica
+# carries, back to the first World Championship. Each finished season costs
+# a few dozen upstream requests the first time it is opened (then it is kept
+# for the life of the process — see cache_base.SeasonCache), so offering all
+# of them is cheap until someone opens one; saved snapshots (snapshots.py)
+# remove even that.
+#
+# The early decades have gaps the code works around rather than hides (see
+# data_fetch.py and pipeline.py): no qualifying data before the mid-1990s
+# (the grid stands in for any round without it), no constructors'
+# championship before 1958 (tiers come from the constructors' points in the
+# results instead), and no three-letter code for most drivers before the
+# 2000s (one is made up from the surname).
+FIRST_SEASON = 1950
+# Sprints began in 2021, the constructors' championship in 1958; earlier
+# seasons skip asking for them.
+FIRST_SPRINT_SEASON = 2021
+FIRST_CONSTRUCTORS_SEASON = 1958
 
 
 def current_season() -> int:
@@ -18,9 +31,8 @@ def current_season() -> int:
 
 
 def available_seasons() -> list[int]:
-    """The seasons the API serves, newest first: this year and the previous ones."""
-    current = current_season()
-    return list(range(current, current - PREVIOUS_SEASONS - 1, -1))
+    """The seasons the API serves, newest first: this year back to FIRST_SEASON."""
+    return list(range(current_season(), FIRST_SEASON - 1, -1))
 
 
 def is_completed_season(season: int) -> bool:

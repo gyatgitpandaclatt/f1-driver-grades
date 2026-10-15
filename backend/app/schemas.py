@@ -114,6 +114,13 @@ class Meta(BaseModel):
     rookie_season_threshold: int
     # This season's constructors' championship order and the tiers set from it.
     constructor_tiers: List[ConstructorTier]
+    # Rounds without qualifying data (every round before the mid-1990s),
+    # where the starting grid stood in for the qualifying order.
+    grid_as_qualifying_rounds: List[int] = []
+    # "standings": the constructors' championship. "results": the
+    # constructors' points in the race results, for the seasons before the
+    # championship began in 1958.
+    constructor_tiers_source: Literal["standings", "results"] = "standings"
 
 
 class DriverGradesResponse(BaseModel):

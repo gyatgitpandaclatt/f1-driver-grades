@@ -200,9 +200,11 @@ def title_moments(s: SeasonData, decided: dict) -> list[dict]:
             new, old = s.leader(r), s.leader(previous)
             runner_up = s.driver_in_position(r, 2)
             margin = s.points.at[r, new] - s.points.at[r, runner_up]
+            # Level on points, the lead goes on countback (1988 Hungary).
+            by = f"by {_points(margin)}" if margin > 0 else "level on points, ahead on countback"
             moments.append(s.moment(
                 r, "lead_change",
-                f"{new} takes the championship lead from {old} (by {_points(margin)})",
+                f"{new} takes the championship lead from {old} ({by})",
                 [new, old], 4,
             ))
 

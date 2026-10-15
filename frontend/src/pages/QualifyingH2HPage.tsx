@@ -12,7 +12,7 @@ function orderPairs(pairs: QualH2HPair[], drivers: DriverGrade[]): QualH2HPair[]
 }
 
 export default function QualifyingH2HPage() {
-  const { drivers, meta } = useLayoutData();
+  const { drivers, meta, season, currentRound } = useLayoutData();
   const byCode = new Map(drivers.map((d) => [d.driver_code, d]));
   const pairs = orderPairs(meta.qual_h2h_pairs, drivers);
 
@@ -23,6 +23,16 @@ export default function QualifyingH2HPage() {
         How often each driver out-qualified their teammate this season, counted over the
         races the two shared a car.
       </p>
+      {meta.grid_as_qualifying_rounds.length > 0 && (
+        <p className="model-note">
+          {meta.grid_as_qualifying_rounds.length === currentRound
+            ? "There is no qualifying data for this season"
+            : `There is no qualifying data for ${meta.grid_as_qualifying_rounds.length} of this season's rounds`}
+          , so the starting grid stands in for the qualifying order.
+          {season < 1980 &&
+            " The data records the make of car, not the entrant, so before the 1980s privateers in the same make of car count as teammates."}
+        </p>
+      )}
       {pairs.length === 0 && <p className="model-note">Not enough teammate data yet.</p>}
       {pairs.map((p) => (
         <div key={`${p.constructor}-${p.driver_a}-${p.driver_b}`} className="h2h-pair">

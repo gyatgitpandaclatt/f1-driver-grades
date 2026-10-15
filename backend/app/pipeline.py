@@ -68,13 +68,84 @@ def _row_to_driver_dict(row: pd.Series) -> dict:
     }
 
 
+def _grid_as_qualifying(qual_df: pd.DataFrame, race_df: pd.DataFrame) -> tuple[pd.DataFrame, list[int]]:
+    """Qualifying, with the grid standing in for any round that has none.
+
+    There is no qualifying data before the mid-1990s, but until grid
+    penalties arrived the grid was the qualifying order, near enough. A
+    driver without a grid slot (0: a pit-lane start, or unrecorded) has no
+    qualifying position, as before. Returns the rounds filled in.
+    """
+    missing = sorted(set(race_df["round"]) - set(qual_df["round"]))
+    if not missing:
+        return qual_df, []
+    grid_pos = pd.to_numeric(race_df["grid_pos"], errors="coerce")
+    grid = race_df[race_df["round"].isin(missing) & (grid_pos > 0)]
+    filled = pd.DataFrame({
+        "season": grid["season"],
+        "round": grid["round"],
+        "driver_code": grid["driver_code"],
+        "qual_pos": grid["grid_pos"].astype(int),
+        "got_pole": (grid["grid_pos"] == 1).astype(int),
+    })
+    combined = pd.concat([qual_df[filled.columns], filled], ignore_index=True) if not qual_df.empty else filled
+    return combined, [int(r) for r in missing]
+
+
+def _complete_standings(standings_df: pd.DataFrame, race_df: pd.DataFrame) -> pd.DataFrame:
+    """The standings, with anyone who raced but isn't listed added at the end.
+
+    The early championships list only some of their entrants, and the grades
+    are joined on the standings: without this, a driver missing from them
+    would silently vanish from the grades.
+    """
+    listed = set(standings_df["Driver Code"])
+    missing = race_df[~race_df["driver_code"].isin(listed)]
+    if missing.empty:
+        return standings_df
+    extra = (
+        missing.groupby("driver_code")
+        .agg(Driver=("driver", "first"), Constructor=("constructor", "first"),
+             Points=("points_scored", "sum"), Wins=("got_win", "sum"))
+        .reset_index()
+        .rename(columns={"driver_code": "Driver Code"})
+        .sort_values(["Points", "Wins"], ascending=False)
+    )
+    last = int(standings_df["Position"].max()) if not standings_df.empty else 0
+    extra["Position"] = range(last + 1, last + 1 + len(extra))
+    extra["Nationality"] = ""
+    return pd.concat([standings_df, extra[standings_df.columns]], ignore_index=True)
+
+
+def _constructor_order(constructor_standings: pd.DataFrame, race_df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """The constructors' championship order, for the car tiers.
+
+    There was no constructors' championship before 1958; its order is then
+    the constructors' points as the race results give them.
+    """
+    if not constructor_standings.empty:
+        return constructor_standings, "standings"
+    order = (
+        race_df.groupby("constructor")
+        .agg(Points=("points_scored", "sum"), Wins=("got_win", "sum"))
+        .reset_index()
+        .rename(columns={"constructor": "Constructor"})
+        .sort_values(["Points", "Wins", "Constructor"], ascending=[False, False, True])
+        .reset_index(drop=True)
+    )
+    order["Position"] = range(1, len(order) + 1)
+    return order[["Position", "Constructor", "Points", "Wins"]], "results"
+
+
 def run_pipeline(season: int) -> dict:
-    qual_df = fetch_qualifying_results(season)
+    # Race results first: they settle the season's driver codes, which every
+    # other fetch reads (see data_fetch._driver_code).
     race_df = fetch_race_results(season)
 
     if race_df.empty:
         raise NoRaceDataError(f"No completed races found for the {season} season yet.", season=season)
 
+    qual_df, grid_rounds = _grid_as_qualifying(fetch_qualifying_results(season), race_df)
     merged_df = merge_qualifying_and_race(qual_df, race_df)
     features_df = engineer_features(merged_df)
     model_df = build_target(features_df)
@@ -90,10 +161,11 @@ def run_pipeline(season: int) -> dict:
 
     season_labeled_df, feature_importances, model_note, rf_metrics = run_model(season_labeled_df)
 
-    standings_df = fetch_driver_standings(season)
+    standings_df = _complete_standings(fetch_driver_standings(season), race_df)
     qual_stats_df = compute_qual_stats(merged_df)
     teammate_df = compute_teammate_pts_ratio(race_df, fetch_sprint_points(season))
-    tiers_df = constructor_tiers(fetch_constructor_standings(season))
+    constructor_order, tiers_source = _constructor_order(fetch_constructor_standings(season), race_df)
+    tiers_df = constructor_tiers(constructor_order)
 
     final_df = compute_composite_scores(
         season_labeled_df, standings_df, qual_stats_df, teammate_df, primary_constructors(race_df), tiers_df
@@ -165,6 +237,8 @@ def run_pipeline(season: int) -> dict:
             "qual_h2h_pairs": qual_h2h_pairs,
             "excluded_drivers": excluded_drivers,
             "rookie_season_threshold": ROOKIE_SEASON_THRESHOLD,
+            "grid_as_qualifying_rounds": grid_rounds,
+            "constructor_tiers_source": tiers_source,
             "constructor_tiers": [
                 {
                     "constructor": row.Constructor,

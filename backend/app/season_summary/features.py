@@ -54,6 +54,49 @@ def championship_table(race_df: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataF
     return pd.DataFrame(rows)
 
 
+def official_championship_table(standings_by_round: dict[int, pd.DataFrame]) -> pd.DataFrame:
+    """The same table as championship_table, from the provider's standings
+    after each round instead of summed results.
+
+    Needed wherever the two differ. Until 1990 only a driver's best results
+    counted (best four of the season in 1950, best eleven of sixteen in
+    1988, and every rule between), so the summed points crown the wrong
+    champion: Prost outscored Senna in 1988 and lost. A driver excluded from
+    a championship (Schumacher in 1997) is another such case.
+    """
+    rows = []
+    previous = None
+    for round_number, standings in sorted(standings_by_round.items()):
+        # A round the provider has no standings for keeps the last known
+        # order, so every round still has a table.
+        if standings.empty and previous is not None:
+            standings = previous
+        previous = standings
+        # Drivers level on points can share a position in the standings;
+        # the table needs one driver per position, in the official order.
+        ordered = standings.sort_values(["Position", "Points"], ascending=[True, False], kind="stable")
+        rows.extend(
+            {
+                "round": int(round_number),
+                "driver_code": row["Driver Code"],
+                "points": float(row["Points"]),
+                "position": position,
+            }
+            for position, row in enumerate(ordered.to_dict("records"), start=1)
+        )
+    return pd.DataFrame(rows, columns=["round", "driver_code", "points", "position"])
+
+
+def counts_every_result(table: pd.DataFrame, final_standings: pd.DataFrame) -> bool:
+    """Whether the summed results reproduce the official final points."""
+    if table.empty or final_standings.empty:
+        return True
+    final = table[table["round"] == table["round"].max()].set_index("driver_code")["points"]
+    official = final_standings.set_index("Driver Code")["Points"]
+    common = official.index.intersection(final.index)
+    return bool(np.allclose(final[common].astype(float), official[common].astype(float), atol=0.01))
+
+
 def split_quarters(rounds: list[int]) -> list[list[int]]:
     """The season's rounds in four near-equal runs, earliest first."""
     return [[int(r) for r in quarter] for quarter in np.array_split(sorted(rounds), 4) if len(quarter)]

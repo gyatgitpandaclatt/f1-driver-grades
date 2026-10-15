@@ -5,8 +5,10 @@ points, first podium, first win) the season summary looks for.
 Everything here is about races already run, so it is cached for the life of
 the process. Jolpica pages cap at 100 rows and allow 500 requests an hour,
 so each question is asked with the narrowest query that answers it rather
-than by pulling whole careers: "how many races did this driver start in
-2019" is one request whatever their career length.
+than by pulling whole careers. "How many races did this driver start in
+1987" is read from that season's results, which list drivers who failed to
+qualify as well as starters: a few requests, shared by every driver asked
+about that season and by the season's own pages.
 
 Drivers are keyed by Ergast's driverId, not their three-letter code. Codes
 are only unique within a season (both Schumachers are MSC).
@@ -16,20 +18,13 @@ from functools import lru_cache
 
 import pandas as pd
 
-from .config import API_BASE_URL, ROOKIE_FULL_SEASON_RACE_SHARE, ROOKIE_SEASON_THRESHOLD
+from .aggregate import min_races_for_grade
+from .config import API_BASE_URL, FIRST_SEASON, ROOKIE_FULL_SEASON_RACE_SHARE, ROOKIE_SEASON_THRESHOLD
 from .data_fetch import _get_json, fetch_race_results, paginate_races
 from .exceptions import UpstreamAPIError
 
-# Every driver who has raced in the seasons on offer fits many times over.
-_CACHE_SIZE = 512
-
-
-def _mrdata_total(url: str) -> int:
-    data = _get_json(url)
-    try:
-        return int(data["MRData"]["total"])
-    except (KeyError, ValueError) as exc:
-        raise UpstreamAPIError(f"Unexpected response shape from {url}: {exc}") from exc
+# Every driver in the championship's history (about 900) fits several times over.
+_CACHE_SIZE = 4096
 
 
 @lru_cache(maxsize=_CACHE_SIZE)
@@ -43,15 +38,17 @@ def _seasons_raced(driver_id: str) -> tuple[int, ...]:
         raise UpstreamAPIError(f"Unexpected response shape from {url}: {exc}") from exc
 
 
-@lru_cache(maxsize=_CACHE_SIZE)
 def _starts_in(driver_id: str, season: int) -> int:
-    return _mrdata_total(f"{API_BASE_URL}/{season}/drivers/{driver_id}/results.json?limit=1")
+    # From the season's results rather than a per-driver count: the early
+    # decades' results list drivers who failed to qualify, and those aren't
+    # starts. Every season asked about is finished, so its results are
+    # fetched once and shared with that season's own pages (see data_fetch).
+    results = fetch_race_results(season)
+    return int(results.loc[results["driver_id"] == driver_id, "round"].nunique())
 
 
-@lru_cache(maxsize=_CACHE_SIZE)
 def _rounds_in(season: int) -> int:
-    # Races with a winner: the rounds actually run, not the ones scheduled.
-    return _mrdata_total(f"{API_BASE_URL}/{season}/results/1.json?limit=1")
+    return int(fetch_race_results(season)["round"].nunique())
 
 
 def full_season_bar(rounds: int) -> int:
@@ -63,7 +60,7 @@ def _full_seasons_before(driver_id: str, before: int, needed: int) -> int:
     """Full seasons in the driver's career before `before`, counting back
     from the most recent and stopping once `needed` are found."""
     found = 0
-    for season in sorted((s for s in _seasons_raced(driver_id) if s < before), reverse=True):
+    for season in sorted((s for s in _seasons_raced(driver_id) if FIRST_SEASON <= s < before), reverse=True):
         if _starts_in(driver_id, season) >= full_season_bar(_rounds_in(season)):
             found += 1
             if found >= needed:
@@ -79,7 +76,24 @@ def rookie_codes(season: int, race_df: pd.DataFrame) -> set[str]:
     season-level fetch, shared with its own grades) settle most drivers at
     once. Only the rest — newcomers, stand-ins, returning veterans — have
     their careers looked up further back.
+
+    Only drivers who raced enough to be graded are looked at: nothing shows
+    a part-time driver's rookie status (they are left out of the grades and
+    footnoted in the season summary), and in the 1950s they were most of the
+    field — the Indianapolis 500 alone brought 33 — each costing a career
+    lookup. If nobody clears the bar yet (after round 1), everyone is.
+
+    Nobody is a rookie in the first championship season. Strictly everyone
+    was, which says nothing: Farina and Fangio were veterans of Grand Prix
+    racing before there was a championship to count it, and the data has
+    no career before it to tell them from a newcomer.
     """
+    starts = race_df.groupby("driver_id")["round"].nunique()
+    regulars = starts.index[starts >= min_races_for_grade(int(race_df["round"].nunique()))]
+    if len(regulars):
+        race_df = race_df[race_df["driver_id"].isin(regulars)]
+    if season <= FIRST_SEASON:
+        return set()
     previous = fetch_race_results(season - 1)
     if previous.empty:
         previous_starts: dict[str, int] = {}

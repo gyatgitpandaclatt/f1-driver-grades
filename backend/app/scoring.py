@@ -219,7 +219,9 @@ def compute_composite_scores(
         df["pos_score"] = 50.0
 
     df["perf_score"] = ((df["overperf_share"] - df["underperf_share"]).clip(-1, 1) * 50 + 50).round(1)
-    df["grid_score"] = ((-df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1)
+    # Neutral for a driver with no race finished from a known grid slot
+    # (every race a retirement, or the 1950s' unrecorded grids).
+    df["grid_score"] = ((-df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1).fillna(50.0)
     df["teammate_score"] = (df["teammate_pts_ratio"] * 100).clip(0, 100).round(1)
 
     max_qual = df["avg_qual_pos"].max()

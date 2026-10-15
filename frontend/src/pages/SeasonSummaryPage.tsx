@@ -70,6 +70,12 @@ function SeasonSummary({ season }: { season: number }) {
         yLabel="Championship position"
         describeX={(round) => `Round ${round} · ${raceNames.get(round) ?? ""}`}
       />
+      {context.official_standings_by_round && (
+        <p className="caption">
+          Only a driver&rsquo;s best results counted towards the {season} title, so the chart
+          follows the official standings, not every point scored.
+        </p>
+      )}
       <NarrativeSection text={sections.championship_progression} />
 
       <h3>Quarterly Analysis</h3>

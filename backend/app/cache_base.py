@@ -97,8 +97,8 @@ class SeasonCache:
     finished season never changes, so its entry is kept for the life of the
     process: recomputing it would re-spend the upstream requests (and, for a
     season summary, an LLM call) only to produce the same answer. The API
-    only accepts config.available_seasons(), so the number of entries stays
-    small.
+    only accepts config.available_seasons(), every season since 1950, so
+    the number of entries stays under a hundred.
 
     A season's TTL is fixed when its entry is first made, so the season that
     was current when the year turned keeps its short TTL until restart.

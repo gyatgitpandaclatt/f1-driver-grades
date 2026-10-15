@@ -114,6 +114,12 @@ export interface Meta {
   // Full prior seasons below which a driver counts as a rookie.
   rookie_season_threshold: number;
   constructor_tiers: ConstructorTier[];
+  // Rounds without qualifying data (every round before the mid-1990s),
+  // where the starting grid stood in for the qualifying order.
+  grid_as_qualifying_rounds: number[];
+  // "results" before the constructors' championship began in 1958: the
+  // order is the constructors' points in the race results.
+  constructor_tiers_source: "standings" | "results";
 }
 
 export interface DriverGradesResponse {
@@ -392,6 +398,9 @@ export interface SeasonSummaryContext {
   part_time_drivers: PartTimeDriver[];
   lineup_changes: LineupChange[];
   rookies: string[];
+  // Only a driver's best results counted (to 1990), so the championship by
+  // round is the official standings rather than the summed results.
+  official_standings_by_round: boolean;
 }
 
 export interface SeasonSummaryResponse {

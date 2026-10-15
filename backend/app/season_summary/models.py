@@ -143,6 +143,10 @@ class SeasonSummaryContext(BaseModel):
     part_time_drivers: List[PartTimeDriverOut]
     lineup_changes: List[LineupChangeOut]
     rookies: List[str]
+    # The summed results don't give the official points — until 1990 only a
+    # driver's best results counted — so the championship after each round
+    # is the provider's standings, not the summed results.
+    official_standings_by_round: bool = False
 
 
 class SeasonSummaryResponse(BaseModel):

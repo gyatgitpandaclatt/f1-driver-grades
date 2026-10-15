@@ -35,6 +35,12 @@ def run_season_summary_pipeline(season: int) -> dict:
 
     weekend = features.weekend_points(race_df, sprint_df)
     table = features.championship_table(race_df, weekend)
+    official_standings_by_round = not features.counts_every_result(table, driver_standings)
+    if official_standings_by_round:
+        # One request a round, only for the seasons that need it.
+        table = features.official_championship_table(
+            ingestion.fetch_standings_by_round(season, sorted(int(r) for r in race_df["round"].unique()))
+        )
     stats = features.driver_season_stats(race_df, weekend).set_index("driver_code")
     rounds = sorted(int(r) for r in race_df["round"].unique())
 
@@ -101,6 +107,7 @@ def run_season_summary_pipeline(season: int) -> dict:
         "part_time_drivers": events.part_time_footnotes(s),
         "lineup_changes": lineups.lineup_changes(race_df),
         "rookies": sorted(rookies),
+        "official_standings_by_round": official_standings_by_round,
     }
 
     top_five = [entry["driver_code"] for entry in final_standings[:5]]
@@ -123,7 +130,12 @@ def run_season_summary_pipeline(season: int) -> dict:
         "sections": sections,
         "context": context,
         "charts": {
-            "standings_series": features.standings_series(table),
+            # Full-season drivers and the top five: a 1950s season had dozens
+            # of one-off entrants (the Indianapolis 500 alone brought 33),
+            # each of whom would be another line.
+            "standings_series": features.standings_series(
+                table[~table["driver_code"].isin(part_timers) | table["driver_code"].isin(top_five)]
+            ),
             "rounds": [{"round": r, "race_name": s.race_names[r]} for r in rounds],
             "highlight_drivers": [entry["driver_code"] for entry in final_standings[:3]],
         },

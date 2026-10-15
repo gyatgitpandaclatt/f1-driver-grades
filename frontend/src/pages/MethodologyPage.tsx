@@ -47,6 +47,8 @@ export default function MethodologyPage() {
     excluded_drivers: excluded,
     rookie_season_threshold: rookieThreshold,
     constructor_tiers: tiers,
+    grid_as_qualifying_rounds: gridRounds,
+    constructor_tiers_source: tiersSource,
   } = meta;
   const rookies = drivers.filter((d) => d.is_rookie);
   const standingsWhen = isCurrentSeason ? "standings so far" : "final standings";
@@ -119,8 +121,13 @@ export default function MethodologyPage() {
         <li>
           <strong>Car Strength Tier Bonus</strong> (flat, 0–6) — rewards drivers in weaker
           cars to offset the advantage of driving a faster car. Each car&rsquo;s tier comes from
-          its team&rsquo;s place in the {season} constructors&rsquo; championship ({standingsWhen}):
-          P1 earns +0 and P9 or lower +6, as in the table below. A driver who changed teams
+          {tiersSource === "results" ? (
+            <> its constructor&rsquo;s place by points in the {season} race results (there was
+              no constructors&rsquo; championship until 1958)</>
+          ) : (
+            <> its team&rsquo;s place in the {season} constructors&rsquo; championship ({standingsWhen})</>
+          )}
+          : P1 earns +0 and P9 or lower +6, as in the table below. A driver who changed teams
           is scored on the car they raced most.
         </li>
         <li>
@@ -278,6 +285,22 @@ export default function MethodologyPage() {
       <p><strong>Qualifying head-to-head normalization.</strong> Drivers without a valid
         teammate (e.g. minimal teammate races) default to a neutral 50% qualifying ratio. This
         neutral assumption may mask actual qualifying strength or weakness.</p>
+
+      {gridRounds.length > 0 && (
+        <p><strong>Qualifying from the grid.</strong>{" "}
+          {gridRounds.length === currentRound
+            ? `There is no qualifying data for ${season}`
+            : `${gridRounds.length} of the ${season} rounds have no qualifying data`}
+          {" "}(the data has none before the mid-1990s), so the starting grid stands in for the
+          qualifying order: for the qualifying score, the head-to-head, and the grid-to-finish
+          measures. Before grid penalties the two were near enough the same, but a grid slot
+          left empty or unrecorded counts as no qualifying result.
+          {season < 1980 && (
+            <> The data also records the make of car rather than the entrant, so privateers in
+              the same make of car (a works Maserati and a private one, say) count as
+              teammates in the points ratio and the head-to-head.</>
+          )}</p>
+      )}
 
       <p><strong>Grid-to-finish outlier capping.</strong> Average finish-minus-grid is capped
         at ±8 positions to reduce outlier influence — an exceptional single-race result (e.g.
