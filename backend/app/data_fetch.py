@@ -373,9 +373,14 @@ def _one_row_per_driver_race(df: pd.DataFrame) -> pd.DataFrame:
 
 _RACE_COLUMNS = [
     "season", "round", "race_name", "driver_id", "driver_code", "driver", "constructor",
-    "grid_pos", "finish_pos", "position_text", "status", "time_millis", "points_scored",
-    "got_win", "dnf",
+    "grid_pos", "finish_pos", "position_text", "status", "laps", "time_millis", "points_scored",
+    "got_win", "dnf", "retired",
 ]
+
+# The statuses of a car that ran to the end. A classified car can still have
+# retired: one that stops after 90% of the distance is classified, with the
+# cause as its status (Vettel's alternator at Monza in 2012, classified 22nd).
+_FINISHED_STATUS = re.compile(r"Finished|Lapped|\+\d+ Laps?")
 
 
 @_shared_once_completed
@@ -413,6 +418,8 @@ def fetch_race_results(season: int) -> pd.DataFrame:
         # send a null grid or position for an old entry.
         grid = str(res.get("grid") or "")
         order = str(res.get("position") or "")
+        laps = str(res.get("laps") or "")
+        status = res.get("status") or ""
 
         rows.append({
             "season": season,
@@ -426,11 +433,16 @@ def fetch_race_results(season: int) -> pd.DataFrame:
             "grid_pos": int(grid) if grid.isdigit() else None,
             "finish_pos": finish_pos,
             "position_text": pos_text,
-            "status": res.get("status", ""),
+            "status": status,
+            # Laps completed.
+            "laps": int(laps) if laps.isdigit() else 0,
             "time_millis": float(millis) if millis else None,
             "points_scored": float(res.get("points") or 0),
             "got_win": 1 if pos_text == "1" else 0,
+            # Not classified: the official DNF.
             "dnf": dnf,
+            # Didn't run to the end, classified or not.
+            "retired": 0 if is_classified and _FINISHED_STATUS.fullmatch(status) else 1,
             # The classification order, unclassified drivers included.
             "_order": int(order) if order.isdigit() else 10_000 + len(rows),
         })

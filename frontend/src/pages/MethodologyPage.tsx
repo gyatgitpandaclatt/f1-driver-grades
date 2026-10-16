@@ -15,7 +15,9 @@ const LABEL_DISPLAY: Record<string, string> = {
   overperformer: "Overperformer",
   underperformer: "Underperformer",
   expected: "Expected",
-  no_qualifying_data: "No qualifying data",
+  first_lap_collision: "First-lap collision",
+  did_not_start: "Did not start",
+  unknown_start: "Start unknown",
 };
 
 function pct(part: number, total: number): string {
@@ -97,8 +99,10 @@ export default function MethodologyPage() {
         </li>
         <li>
           <strong>Grid-to-Finish Improvement Score (17.5% weight)</strong> — average places
-          gained from qualifying position to finishing position, scaled around 50; drivers
-          who gain positions earn higher scores, and drivers who lose them score below 50.
+          gained from the starting grid slot (after any penalties; a pit-lane start counts
+          as the back of the field) to the finish, over the races the driver ran to the end,
+          scaled around 50; drivers who gain positions earn higher scores, and drivers who
+          lose them score below 50.
         </li>
         <li>
           <strong>Teammate Points Ratio Score (15% weight)</strong> —{" "}
@@ -206,11 +210,30 @@ export default function MethodologyPage() {
         seasonal aggregation.
       </p>
 
-      <p><strong>Per-race classification.</strong> Each race result is classified independently:</p>
+      <p>
+        <strong>Per-race classification.</strong> Each race result is classified
+        independently, against where the driver started: their grid slot after any penalties,
+        with a pit-lane start counting as the back of the field.
+      </p>
       <ul>
-        <li><strong>Overperformed:</strong> finished ≥3 grid positions higher than qualifying</li>
-        <li><strong>Underperformed:</strong> finished ≥3 grid positions lower than qualifying, or did not finish (DNF)</li>
-        <li><strong>Expected:</strong> finished within ±2 positions of grid position</li>
+        <li><strong>Overperformed:</strong> finished ≥3 places ahead of their starting position</li>
+        <li>
+          <strong>Underperformed:</strong> finished ≥3 places behind their starting position,
+          or retired. A car that stopped in the closing laps can still be classified; it keeps
+          its position and points, but counts as a retirement here.
+        </li>
+        <li><strong>Expected:</strong> finished within 2 places of their starting position</li>
+        <li>
+          <strong>First-lap collision:</strong> retired from a collision on the opening lap, or
+          from its damage on the lap after. The data doesn&rsquo;t record who caused a collision,
+          so it counts for no one involved, the driver who caused it included.
+        </li>
+        {season >= 2021 && (
+          <li>
+            <strong>Did not start:</strong> missed the Grand Prix, but stays in the results for
+            that weekend&rsquo;s sprint.
+          </li>
+        )}
       </ul>
 
       <p><strong>Seasonal aggregation (30% threshold filter).</strong> The per-driver seasonal label is assigned as follows:</p>
@@ -219,6 +242,10 @@ export default function MethodologyPage() {
         <li>Underperformance frequency &gt; overperformance frequency <strong>and</strong> underperformance frequency &gt; 30% of entries → <strong>underperformer</strong></li>
         <li>Otherwise → <strong>expected</strong></li>
       </ul>
+      <p>
+        The frequencies are of the races judged: first-lap collisions
+        {season >= 2021 ? " and races not started" : ""} are left out.
+      </p>
       <p>
         The 30% threshold filters noise and requires a meaningful pattern before applying a
         label, which prevents volatile drivers with only one or two unusual races from being
