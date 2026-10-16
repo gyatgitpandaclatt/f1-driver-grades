@@ -14,7 +14,9 @@ def merge_qualifying_and_race(qual_df: pd.DataFrame, race_df: pd.DataFrame) -> p
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(["driver_code", "round"]).copy()
 
-    # race result relative to qualifying
+    # race result relative to qualifying: places gained, despite the name.
+    # Positive when the driver finishes ahead of where they qualified
+    # (qualified 10th, finished 5th -> +5), negative when they lose places.
     df["finish_minus_grid"] = df["qual_pos"] - df["finish_pos"]
 
     # cumulative season stats
