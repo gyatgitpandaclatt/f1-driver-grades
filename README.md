@@ -183,7 +183,7 @@ rewrite a narrative, rebuild that season's snapshot.
   scores), which is why nothing season-wide reads lap data: a single race's
   laps are ~12 requests.
 - The data has gaps, each worked around in the open rather than hidden.
-  Three of them apply to the seasons on offer:
+  Four of them apply to the seasons on offer:
   - **No driver codes.** Ergast only has three-letter codes for drivers from
     about 2005 on; a few 2003-2004 drivers (da Matta, Panis, Baumgartner)
     have none. They get one made from their surname, unique within the
@@ -196,6 +196,12 @@ rewrite a narrative, rebuild that season's snapshot.
     rule) and, before 2021, drivers who never took the start; they are
     dropped, since they never raced (from 2021 a non-starter stays, as they
     may have raced the sprint).
+  - **No blame for collisions.** A retirement's status gives its cause
+    ("Collision"), never who caused it, so retiring in a collision on the
+    opening lap (or from its damage on the lap after) counts as neither an
+    over- nor an underperformance, for the driver who caused it as much as
+    the one hit. A retirement recorded without a cause ("Retired") can't be
+    told apart, and counts as an ordinary retirement.
 
   The rest only matter if `FIRST_SEASON` is lowered (the code handles every
   season back to 1950):

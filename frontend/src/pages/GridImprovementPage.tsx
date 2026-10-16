@@ -14,7 +14,8 @@ export default function GridImprovementPage() {
     <div className="panel">
       <h2>Grid Improvement Score</h2>
       <p className="model-note">
-        Based on average finishing position relative to qualifying position across the season.
+        Based on average places gained from the starting grid slot (after penalties; a pit-lane
+        start counts as the back of the field) to the finish, over the races run to the end.
         Above the line (50) means gaining places on race day on average; below it, losing them.
       </p>
       <DriverBarChart data={data} neutral={50} />
