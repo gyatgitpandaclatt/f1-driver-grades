@@ -21,7 +21,17 @@ finishing next to each other a few seconds apart: describe it as a close
 fight to the flag, not as passes or laps you cannot see.
 
 Championship positions and points after each round were computed from the
-results. "Quarters" split the season's rounds into four near-equal runs.
+results, or, when "Dropped scores" says so, taken from the official
+standings: in those seasons only a driver's best results counted, so a
+driver's points total can be lower than the sum of their results, and the
+title can go to the driver who scored fewer points in all.
+"Quarters" split the season's rounds into four near-equal runs.
+
+In the seasons before 1958 there was no constructors' championship, so the
+constructors' standings are empty. Until 1960 the Indianapolis 500 was a
+round of the championship, contested by its own American field; its winner
+is not a Grand Prix winner in the European sense, and its drivers are
+usually part-time drivers.
 
 "Part-time drivers" started too few races to count as full-season drivers.
 They are footnotes: never make them part of the championship story, and
@@ -71,8 +81,23 @@ _REPORT_SCHEMA = {
 }
 
 
+# The early seasons had dozens of one-off entrants; listing every one would
+# crowd out the season itself (and overflow Cerebras' small context).
+_MAX_PART_TIME_DRIVERS = 12
+_MAX_LINEUP_CHANGES = 20
+# A 1950s championship lists over a hundred drivers; the story needs the
+# full-season ones and whoever scored (a whole modern grid fits).
+_MAX_STANDINGS = 25
+
+
+def _capped(items: list, limit: int) -> list:
+    return items if len(items) <= limit else items[:limit] + [f"... and {len(items) - limit} more"]
+
+
 def _build_user_prompt(context: dict, positions_by_round: dict) -> str:
     decided = context['title_decided']
+    part_timers = sorted(context['part_time_drivers'], key=lambda d: (-d['points'], -d['races']))
+    standings = [d for d in context['final_standings'] if not d['part_time'] or d['points'] > 0]
     when = (
         f"with {decided['rounds_left']} round(s) to go"
         if decided['rounds_left']
@@ -82,16 +107,18 @@ def _build_user_prompt(context: dict, positions_by_round: dict) -> str:
 Season: {context['season']} Formula 1 World Championship, {context['rounds']} rounds
 Title decided: {decided['driver_code']}, round {decided['round']} ({decided['race_name']}), {when}
 
-Final Drivers' Standings: {compact(context['final_standings'])}
+Final Drivers' Standings (full-season drivers and point scorers): {compact(_capped(standings, _MAX_STANDINGS))}
 Final Constructors' Standings: {compact(context['constructor_standings'])}
 Race Winners and Podiums: {compact(context['races'])}
 Championship Position After Each Round (the season's top five, round 1 first): {compact(positions_by_round)}
 Quarters: {compact(context['quarters'])}
 Championship Moments: {compact(context['championship_moments'])}
 Other Moments: {compact(context['other_moments'])}
+Dropped scores (only best results counted; standings are official): {'yes' if context.get('official_standings_by_round') else 'no'}
 Rookies: {compact(context['rookies'])}
-Part-Time Drivers (footnotes only): {compact([d['summary'] for d in context['part_time_drivers']])}
-Lineup Changes (no reasons given): {compact(context['lineup_changes'])}
+Part-Time Drivers (footnotes only, highest scorers first): {compact(_capped([d['summary'] for d in part_timers], _MAX_PART_TIME_DRIVERS))}
+Indianapolis 500 Only (its own field; footnote at most): {compact(_capped([f"{d['driver_name']} {d['result']}" for d in context.get('indianapolis_500_only', [])], 3))}
+Lineup Changes (no reasons given): {compact(_capped(context['lineup_changes'], _MAX_LINEUP_CHANGES))}
 
 Write a full season review as a JSON object with these sections:
 {section_guide(_REPORT_SCHEMA)}

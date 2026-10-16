@@ -596,6 +596,37 @@ td.wrap {
   font-size: 0.82rem;
 }
 
+/* A line under a table: who isn't in it, what its numbers mean. */
+.table-note {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+/* Long lists folded away: the 1950s' part-time footnotes, the drivers left
+   out of the grades, and same-make pairings that include private entries. */
+.more-list {
+  margin: 4px 0 14px;
+}
+
+.more-list > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.more-list > summary:hover,
+.more-list > summary:focus-visible {
+  color: var(--text);
+}
+
+.more-list[open] > summary {
+  margin-bottom: 8px;
+}
+
 /* ── STAT TILES ── */
 .stat-grid {
   display: grid;

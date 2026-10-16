@@ -29,10 +29,13 @@ def championship_table(race_df: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataF
     standings request per round): the points are the ones the results
     carry, half-points races included, and ties are broken the FIA way, by
     countback of Grand Prix finishes — most wins, then most seconds, and so
-    on.
+    on. Drivers who are still level after that keep the order they had
+    after the previous round, as in the official standings, so a dead heat
+    never hands over the lead.
     """
     totals: dict[str, float] = defaultdict(float)
     finishes: dict[str, Counter] = defaultdict(Counter)
+    previous: dict[str, int] = {}
     rows = []
     for round_number in sorted(race_df["round"].unique()):
         for row in weekend[weekend["round"] == round_number].itertuples():
@@ -42,9 +45,16 @@ def championship_table(race_df: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataF
                 finishes[row.driver_code][int(row.finish_pos)] += 1
 
         def countback(code: str):
-            return (-totals[code], *(-finishes[code][p] for p in range(1, _COUNTBACK_DEPTH + 1)), code)
+            return (
+                -totals[code],
+                *(-finishes[code][p] for p in range(1, _COUNTBACK_DEPTH + 1)),
+                previous.get(code, len(previous) + 1),
+                code,
+            )
 
-        for position, code in enumerate(sorted(totals, key=countback), start=1):
+        order = sorted(totals, key=countback)
+        previous = {code: position for position, code in enumerate(order, start=1)}
+        for position, code in enumerate(order, start=1):
             rows.append({
                 "round": int(round_number),
                 "driver_code": code,
@@ -52,6 +62,49 @@ def championship_table(race_df: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataF
                 "position": position,
             })
     return pd.DataFrame(rows)
+
+
+def official_championship_table(standings_by_round: dict[int, pd.DataFrame]) -> pd.DataFrame:
+    """The same table as championship_table, from the provider's standings
+    after each round instead of summed results.
+
+    Needed wherever the two differ. Until 1990 only a driver's best results
+    counted (best four of the season in 1950, best eleven of sixteen in
+    1988, and every rule between), so the summed points crown the wrong
+    champion: Prost outscored Senna in 1988 and lost. A driver excluded from
+    a championship (Schumacher in 1997) is another such case.
+    """
+    rows = []
+    previous = None
+    for round_number, standings in sorted(standings_by_round.items()):
+        # A round the provider has no standings for keeps the last known
+        # order, so every round still has a table.
+        if standings.empty and previous is not None:
+            standings = previous
+        previous = standings
+        # Drivers level on points can share a position in the standings;
+        # the table needs one driver per position, in the official order.
+        ordered = standings.sort_values(["Position", "Points"], ascending=[True, False], kind="stable")
+        rows.extend(
+            {
+                "round": int(round_number),
+                "driver_code": row["Driver Code"],
+                "points": float(row["Points"]),
+                "position": position,
+            }
+            for position, row in enumerate(ordered.to_dict("records"), start=1)
+        )
+    return pd.DataFrame(rows, columns=["round", "driver_code", "points", "position"])
+
+
+def counts_every_result(table: pd.DataFrame, final_standings: pd.DataFrame) -> bool:
+    """Whether the summed results reproduce the official final points."""
+    if table.empty or final_standings.empty:
+        return True
+    final = table[table["round"] == table["round"].max()].set_index("driver_code")["points"]
+    official = final_standings.set_index("Driver Code")["Points"]
+    common = official.index.intersection(final.index)
+    return bool(np.allclose(final[common].astype(float), official[common].astype(float), atol=0.01))
 
 
 def split_quarters(rounds: list[int]) -> list[list[int]]:

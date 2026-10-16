@@ -6,6 +6,9 @@ export interface DriverGrade {
   constructor: string;
   points: number;
   position: number;
+  // How the championship listed them: the position, or "-" (not classified),
+  // "D" (disqualified, Schumacher 1997) or "E" (excluded).
+  position_text: string;
   wins: number;
   races: number;
   is_rookie: boolean;
@@ -114,6 +117,16 @@ export interface Meta {
   // Full prior seasons below which a driver counts as a rookie.
   rookie_season_threshold: number;
   constructor_tiers: ConstructorTier[];
+  // Rounds without qualifying data (every round before the mid-1990s),
+  // where the starting grid stood in for the qualifying order.
+  grid_as_qualifying_rounds: number[];
+  // "results" before the constructors' championship began in 1958: the
+  // order is the constructors' points in the race results.
+  constructor_tiers_source: "standings" | "results";
+  // Makes that ran five or more cars in a Grand Prix: private entries too.
+  makes_with_privateers: string[];
+  // Only a driver's best results counted (to 1990): points are counted points.
+  dropped_scores: boolean;
 }
 
 export interface DriverGradesResponse {
@@ -392,6 +405,17 @@ export interface SeasonSummaryContext {
   part_time_drivers: PartTimeDriver[];
   lineup_changes: LineupChange[];
   rookies: string[];
+  // Only a driver's best results counted (to 1990), so the championship by
+  // round is the official standings rather than the summed results.
+  official_standings_by_round: boolean;
+  // 1950-60: drivers whose only race was the Indianapolis 500.
+  indianapolis_500_only: IndianapolisEntrant[];
+}
+
+export interface IndianapolisEntrant {
+  driver_code: string;
+  driver_name: string;
+  result: string;
 }
 
 export interface SeasonSummaryResponse {

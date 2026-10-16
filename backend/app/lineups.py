@@ -68,6 +68,11 @@ def lineup_changes(race_df: pd.DataFrame) -> list[dict]:
         previous: set[str] | None = None
         for round_number, rows in team.groupby("round"):
             current = set(rows["driver_code"])
+            # A seat left empty with nobody new in it (a driver who failed
+            # to qualify, or a team running one car for a race) isn't a
+            # change: the lineup is the same when the driver is back.
+            if previous is not None and current < previous:
+                continue
             if previous is not None and current != previous:
                 incoming = sorted(current - previous)
                 outgoing = sorted(previous - current)

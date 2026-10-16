@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { DriverGrade } from "../api/types";
 import { GRADE_ORDER } from "../theme/theme";
 import GradeBadge from "./GradeBadge";
@@ -21,12 +21,28 @@ const COLUMNS: Column[] = [
   { key: "season_label", label: "Season Label" },
 ];
 
+// Drivers the championship didn't place share the position after the last
+// classified one; show why instead of a number none of them held.
+const UNPLACED: Record<string, { label: string; title: string }> = {
+  "-": { label: "NC", title: "Not classified in the championship" },
+  D: { label: "DSQ", title: "Disqualified from the championship" },
+  E: { label: "EX", title: "Excluded from the championship" },
+};
+
 function sortValue(driver: DriverGrade, key: SortKey): number | string {
   if (key === "grade") return GRADE_ORDER[driver.grade] ?? 0;
   return driver[key] as number | string;
 }
 
-export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
+export default function DriverTable({
+  drivers,
+  droppedScores = false,
+  footer,
+}: {
+  drivers: DriverGrade[];
+  droppedScores?: boolean;
+  footer?: ReactNode;
+}) {
   const [sortKey, setSortKey] = useState<SortKey>("composite");
   const [ascending, setAscending] = useState(false);
 
@@ -57,8 +73,16 @@ export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
         <thead>
           <tr>
             {COLUMNS.map((col) => (
-              <th key={col.key} onClick={() => handleSort(col.key)}>
-                {col.label}
+              <th
+                key={col.key}
+                onClick={() => handleSort(col.key)}
+                title={
+                  col.key === "points" && droppedScores
+                    ? "Championship points: only each driver's best results counted this season"
+                    : undefined
+                }
+              >
+                {col.key === "points" && droppedScores ? "Points (counted)" : col.label}
                 {sortKey === col.key ? (ascending ? " ▲" : " ▼") : ""}
               </th>
             ))}
@@ -71,10 +95,12 @@ export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
               layout
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
             >
-              <td>{d.position}</td>
+              <td title={UNPLACED[d.position_text]?.title}>
+                {UNPLACED[d.position_text]?.label ?? d.position}
+              </td>
               <td>{d.driver_name}</td>
               <td>{d.constructor}</td>
-              <td>{d.points.toFixed(0)}</td>
+              <td>{Number.isInteger(d.points) ? d.points : +d.points.toFixed(2)}</td>
               <td>{d.composite.toFixed(1)}</td>
               <td>
                 <GradeBadge grade={d.grade} />
@@ -84,6 +110,7 @@ export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
           ))}
         </tbody>
       </table>
+      {footer}
     </div>
   );
 }

@@ -47,7 +47,15 @@ export default function MethodologyPage() {
     excluded_drivers: excluded,
     rookie_season_threshold: rookieThreshold,
     constructor_tiers: tiers,
+    grid_as_qualifying_rounds: gridRounds,
+    constructor_tiers_source: tiersSource,
+    makes_with_privateers: privateerMakes,
   } = meta;
+  // The 1950s left dozens out (the Indianapolis 500's field alone): name the
+  // most-raced, and fold the rest away.
+  const excludedText = (d: { driver_name: string; races: number }) =>
+    `${d.driver_name} (${d.races} ${d.races === 1 ? "race" : "races"})`;
+  const EXCLUDED_SHOWN = 12;
   const rookies = drivers.filter((d) => d.is_rookie);
   const standingsWhen = isCurrentSeason ? "standings so far" : "final standings";
   // From the graded drivers' own counts: totalRaces also holds the entries of
@@ -93,9 +101,10 @@ export default function MethodologyPage() {
           who gain positions earn higher scores, and drivers who lose them score below 50.
         </li>
         <li>
-          <strong>Teammate Points Ratio Score (15% weight)</strong> — points (Grand Prix and
-          sprint) relative to the teammate&rsquo;s, counted only over the weekends the two shared
-          a car; isolates driver value from car performance.
+          <strong>Teammate Points Ratio Score (15% weight)</strong> —{" "}
+          {season >= 2021 ? "points (Grand Prix and sprint)" : "points"} relative to the
+          teammate&rsquo;s, counted only over the weekends the two shared a car; isolates driver
+          value from car performance.
         </li>
         <li>
           <strong>Qualifying Score (15% weight)</strong> — a composite of three
@@ -119,18 +128,28 @@ export default function MethodologyPage() {
         <li>
           <strong>Car Strength Tier Bonus</strong> (flat, 0–6) — rewards drivers in weaker
           cars to offset the advantage of driving a faster car. Each car&rsquo;s tier comes from
-          its team&rsquo;s place in the {season} constructors&rsquo; championship ({standingsWhen}):
-          P1 earns +0 and P9 or lower +6, as in the table below. A driver who changed teams
+          {tiersSource === "results" ? (
+            <> its constructor&rsquo;s place by points in the {season} race results (there was
+              no constructors&rsquo; championship until 1958)</>
+          ) : (
+            <> its team&rsquo;s place in the {season} constructors&rsquo; championship ({standingsWhen})</>
+          )}
+          : P1 earns +0 and P9 or lower +6, as in the table below. A driver who changed teams
           is scored on the car they raced most.
         </li>
         <li>
           <strong>Rookie Bonus</strong> (flat +2) — applied to drivers with fewer than{" "}
-          {rookieThreshold} full F1 {rookieThreshold === 1 ? "season" : "seasons"} behind them
-          before {season}. A season only counts as full if they started at least half its races,
-          so a reserve&rsquo;s stand-in outings don&rsquo;t use up their rookie year.{" "}
-          {rookies.length > 0
-            ? `${season} rookies: ${rookies.map((d) => d.driver_name).join(", ")}.`
-            : `No graded driver counts as a rookie in ${season}.`}
+          {rookieThreshold} {rookieThreshold === 1 ? "season" : "seasons"} of F1 experience
+          before {season}. A season counts if they started at least half its races, so a
+          reserve&rsquo;s stand-in outings don&rsquo;t use up their rookie year, but partial
+          seasons add up: a full season&rsquo;s worth of starts counts as one.
+          {season < 1975 &&
+            " Before 1960, any championship start counts as a season, since most careers then ran largely outside the championship."}{" "}
+          {season === 1950
+            ? "Nobody counts as a rookie in 1950, the first championship season: the data has no earlier careers to tell the pre-war veterans from the newcomers."
+            : rookies.length > 0
+              ? `${season} rookies: ${rookies.map((d) => d.driver_name).join(", ")}.`
+              : `No graded driver counts as a rookie in ${season}.`}
         </li>
       </ul>
 
@@ -207,7 +226,7 @@ export default function MethodologyPage() {
       </p>
 
       <p className="caption">
-        Current distribution across {totalRaces} race entries (avg. {avgRacesPerDriver} races
+        {isCurrentSeason ? "Current distribution" : "Distribution"} across {totalRaces} race entries (avg. {avgRacesPerDriver} races
         per driver):
       </p>
       <div className="stat-grid">
@@ -247,8 +266,9 @@ export default function MethodologyPage() {
       )}
 
       <p><strong>Minimum race count.</strong> Drivers who have started fewer than half of
-        the season&rsquo;s races (never fewer than 2) are left out of the grades and the
-        head-to-head page entirely
+        the season&rsquo;s races (never fewer than 2
+        {season <= 1960 ? ", and not counting the Indianapolis 500, which had its own field" : ""})
+        are left out of the grades and the head-to-head page entirely
         {minRaces != null ? (
           <> — through round {currentRound}, that means fewer than {minRaces}.</>
         ) : (
@@ -264,8 +284,15 @@ export default function MethodologyPage() {
         such as a driver&rsquo;s short stint in another team&rsquo;s car.
         {excluded.length > 0 && (
           <> Left out of the {season} grades:{" "}
-            {excluded.map((d) => `${d.driver_name} (${d.races} ${d.races === 1 ? "race" : "races"})`).join(", ")}.</>
+            {excluded.slice(0, EXCLUDED_SHOWN).map(excludedText).join(", ")}
+            {excluded.length > EXCLUDED_SHOWN ? "" : "."}</>
         )}</p>
+      {excluded.length > EXCLUDED_SHOWN && (
+        <details className="more-list">
+          <summary>and {excluded.length - EXCLUDED_SHOWN} more</summary>
+          <p>{excluded.slice(EXCLUDED_SHOWN).map(excludedText).join(", ")}.</p>
+        </details>
+      )}
 
       <p><strong>Sample size &amp; volatility.</strong> Only {drivers.length} drivers are graded,
         limiting the robustness of per-driver metrics. Drivers with fewer completed races
@@ -279,12 +306,33 @@ export default function MethodologyPage() {
         teammate (e.g. minimal teammate races) default to a neutral 50% qualifying ratio. This
         neutral assumption may mask actual qualifying strength or weakness.</p>
 
+      {gridRounds.length > 0 && (
+        <p><strong>Qualifying from the grid.</strong>{" "}
+          {gridRounds.length === currentRound
+            ? `There is no qualifying data for ${season}`
+            : `${gridRounds.length} of the ${season} rounds have no qualifying data`}
+          {" "}(the data has none before the mid-1990s), so the starting grid stands in for the
+          qualifying order: for the qualifying score, the head-to-head, and the grid-to-finish
+          measures. Before grid penalties the two were near enough the same, but a grid slot
+          left empty or unrecorded counts as no qualifying result.</p>
+      )}
+
+      {privateerMakes.length > 0 && (
+        <p><strong>Privateers as teammates.</strong> The data records the make of car, not who
+          entered it, so drivers of the same make count as teammates in the points ratio and the
+          head-to-head, a works car and a private one included. In {season}{" "}
+          {privateerMakes.join(", ")} ran five or more cars in a Grand Prix, more than a works
+          team entered, so their &ldquo;teammates&rdquo; may include private entries.</p>
+      )}
+
       <p><strong>Grid-to-finish outlier capping.</strong> Average places gained is capped
         at ±8 positions to reduce outlier influence — an exceptional single-race result (e.g.
         gaining 15+ places from a low grid slot) is partially masked in the composite score.</p>
 
-      <p><strong>Constructor strength estimates.</strong> Constructor tiers follow the
-        constructors&rsquo; championship ({standingsWhen}), which mixes car pace with driver
+      <p><strong>Constructor strength estimates.</strong> Constructor tiers follow{" "}
+        {tiersSource === "results"
+          ? "the constructors' points in the Grand Prix results (there was no constructors' championship until 1958)"
+          : `the constructors' championship (${standingsWhen})`}, which mixes car pace with driver
         performance and doesn&rsquo;t account for in-season car development. Teams with large
         mid-season upgrades may be over- or under-penalized by a single tier for the season
         {isCurrentSeason ? ", and early in a season the order rests on only a handful of races" : ""}.</p>

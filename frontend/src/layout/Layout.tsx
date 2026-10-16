@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Outlet, useLocation, useSearchParams } from "react-router";
+import { useLocation, useOutlet, useSearchParams } from "react-router";
 import Header from "../components/Header";
 import Nav from "../components/Nav";
 import StatusBanner from "../components/StatusBanner";
@@ -46,6 +46,11 @@ export default function Layout() {
     loaded && meta && season != null && currentRound != null
       ? { drivers, meta, season, isCurrentSeason: isCurrentSeason !== false, currentRound }
       : null;
+  // The page element, captured per render. An exiting page keeps the element
+  // it was rendered with while it animates out; an <Outlet/> inside it would
+  // read the router live and re-render the new page in the exiting tree,
+  // which left the content stuck invisible after a tab change.
+  const outlet = useOutlet(context ?? undefined);
 
   return (
     <>
@@ -87,7 +92,7 @@ export default function Layout() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
           >
-            <Outlet context={context} />
+            {outlet}
           </motion.div>
         </AnimatePresence>
       )}
