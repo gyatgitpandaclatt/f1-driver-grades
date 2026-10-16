@@ -74,33 +74,35 @@ function SeasonSummary({ season }: { season: number }) {
 
       <h3>Quarterly Analysis</h3>
       <NarrativeSection text={sections.quarterly_analysis} />
-      <table>
-        <thead>
-          <tr>
-            <th>Quarter</th>
-            <th>Rounds</th>
-            <th>Leader after</th>
-            <th>Most points</th>
-            <th>Winners</th>
-          </tr>
-        </thead>
-        <tbody>
-          {context.quarters.map((q) => (
-            <tr key={q.label}>
-              <td>{q.label}</td>
-              <td>
-                {q.first_round}–{q.last_round}
-              </td>
-              <td>
-                {q.leader}
-                {q.margin != null ? ` (+${pts(q.margin)} on ${q.runner_up})` : ""}
-              </td>
-              <td>{q.top_scorers.map((d) => `${d.driver_code} ${pts(d.points)}`).join(", ")}</td>
-              <td>{q.winners.map((w) => `${w.driver_code} ×${w.wins}`).join(", ") || "—"}</td>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Quarter</th>
+              <th>Rounds</th>
+              <th>Leader after</th>
+              <th>Most points</th>
+              <th>Winners</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {context.quarters.map((q) => (
+              <tr key={q.label}>
+                <td>{q.label}</td>
+                <td>
+                  {q.first_round}–{q.last_round}
+                </td>
+                <td>
+                  {q.leader}
+                  {q.margin != null ? ` (+${pts(q.margin)} on ${q.runner_up})` : ""}
+                </td>
+                <td>{q.top_scorers.map((d) => `${d.driver_code} ${pts(d.points)}`).join(", ")}</td>
+                <td>{q.winners.map((w) => `${w.driver_code} ×${w.wins}`).join(", ") || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h3>Crucial Moments — The Championship</h3>
       <NarrativeSection text={sections.championship_moments} />

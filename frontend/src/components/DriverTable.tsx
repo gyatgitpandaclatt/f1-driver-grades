@@ -53,37 +53,39 @@ export default function DriverTable({ drivers }: { drivers: DriverGrade[] }) {
   return (
     <div className="panel">
       <h2>Driver Grades</h2>
-      <table>
-        <thead>
-          <tr>
-            {COLUMNS.map((col) => (
-              <th key={col.key} onClick={() => handleSort(col.key)}>
-                {col.label}
-                {sortKey === col.key ? (ascending ? " ▲" : " ▼") : ""}
-              </th>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              {COLUMNS.map((col) => (
+                <th key={col.key} onClick={() => handleSort(col.key)}>
+                  {col.label}
+                  {sortKey === col.key ? (ascending ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((d) => (
+              <motion.tr
+                key={d.driver_code}
+                layout
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
+              >
+                <td>{d.position}</td>
+                <td>{d.driver_name}</td>
+                <td>{d.constructor}</td>
+                <td>{d.points.toFixed(0)}</td>
+                <td>{d.composite.toFixed(1)}</td>
+                <td>
+                  <GradeBadge grade={d.grade} />
+                </td>
+                <td>{d.season_label}</td>
+              </motion.tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((d) => (
-            <motion.tr
-              key={d.driver_code}
-              layout
-              transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            >
-              <td>{d.position}</td>
-              <td>{d.driver_name}</td>
-              <td>{d.constructor}</td>
-              <td>{d.points.toFixed(0)}</td>
-              <td>{d.composite.toFixed(1)}</td>
-              <td>
-                <GradeBadge grade={d.grade} />
-              </td>
-              <td>{d.season_label}</td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
