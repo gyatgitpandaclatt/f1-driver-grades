@@ -69,47 +69,49 @@ export default function DriverTable({
   return (
     <div className="panel">
       <h2>Driver Grades</h2>
-      <table>
-        <thead>
-          <tr>
-            {COLUMNS.map((col) => (
-              <th
-                key={col.key}
-                onClick={() => handleSort(col.key)}
-                title={
-                  col.key === "points" && droppedScores
-                    ? "Championship points: only each driver's best results counted this season"
-                    : undefined
-                }
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  onClick={() => handleSort(col.key)}
+                  title={
+                    col.key === "points" && droppedScores
+                      ? "Championship points: only each driver's best results counted this season"
+                      : undefined
+                  }
+                >
+                  {col.key === "points" && droppedScores ? "Points (counted)" : col.label}
+                  {sortKey === col.key ? (ascending ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((d) => (
+              <motion.tr
+                key={d.driver_code}
+                layout
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
               >
-                {col.key === "points" && droppedScores ? "Points (counted)" : col.label}
-                {sortKey === col.key ? (ascending ? " ▲" : " ▼") : ""}
-              </th>
+                <td title={UNPLACED[d.position_text]?.title}>
+                  {UNPLACED[d.position_text]?.label ?? d.position}
+                </td>
+                <td>{d.driver_name}</td>
+                <td>{d.constructor}</td>
+                <td>{Number.isInteger(d.points) ? d.points : +d.points.toFixed(2)}</td>
+                <td>{d.composite.toFixed(1)}</td>
+                <td>
+                  <GradeBadge grade={d.grade} />
+                </td>
+                <td>{d.season_label}</td>
+              </motion.tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((d) => (
-            <motion.tr
-              key={d.driver_code}
-              layout
-              transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            >
-              <td title={UNPLACED[d.position_text]?.title}>
-                {UNPLACED[d.position_text]?.label ?? d.position}
-              </td>
-              <td>{d.driver_name}</td>
-              <td>{d.constructor}</td>
-              <td>{Number.isInteger(d.points) ? d.points : +d.points.toFixed(2)}</td>
-              <td>{d.composite.toFixed(1)}</td>
-              <td>
-                <GradeBadge grade={d.grade} />
-              </td>
-              <td>{d.season_label}</td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
       {footer}
     </div>
   );

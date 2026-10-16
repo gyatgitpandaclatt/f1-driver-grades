@@ -154,28 +154,30 @@ export default function MethodologyPage() {
       </ul>
 
       {tiers.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Pos</th>
-              <th>Constructor</th>
-              <th>Points</th>
-              <th>Tier</th>
-              <th>Tier bonus</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tiers.map((t) => (
-              <tr key={t.constructor}>
-                <td>{t.position}</td>
-                <td>{t.constructor}</td>
-                <td>{pts(t.points)}</td>
-                <td>{t.tier}</td>
-                <td>+{t.tier_bonus}</td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Pos</th>
+                <th>Constructor</th>
+                <th>Points</th>
+                <th>Tier</th>
+                <th>Tier bonus</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tiers.map((t) => (
+                <tr key={t.constructor}>
+                  <td>{t.position}</td>
+                  <td>{t.constructor}</td>
+                  <td>{pts(t.points)}</td>
+                  <td>{t.tier}</td>
+                  <td>+{t.tier_bonus}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3>Grade Boundaries</h3>
