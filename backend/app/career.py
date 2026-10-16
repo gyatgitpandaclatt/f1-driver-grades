@@ -18,8 +18,14 @@ from functools import lru_cache
 
 import pandas as pd
 
-from .aggregate import min_races_for_grade
-from .config import API_BASE_URL, FIRST_SEASON, ROOKIE_FULL_SEASON_RACE_SHARE, ROOKIE_SEASON_THRESHOLD
+from .aggregate import grading_rounds, min_races_for_grade
+from .config import (
+    API_BASE_URL,
+    FIRST_CHAMPIONSHIP_SEASON,
+    ROOKIE_ANY_START_COUNTS_BEFORE,
+    ROOKIE_FULL_SEASON_RACE_SHARE,
+    ROOKIE_SEASON_THRESHOLD,
+)
 from .data_fetch import _get_json, fetch_race_results, paginate_races
 from .exceptions import UpstreamAPIError
 
@@ -48,7 +54,7 @@ def _starts_in(driver_id: str, season: int) -> int:
 
 
 def _rounds_in(season: int) -> int:
-    return int(fetch_race_results(season)["round"].nunique())
+    return grading_rounds(fetch_race_results(season))
 
 
 def full_season_bar(rounds: int) -> int:
@@ -56,21 +62,35 @@ def full_season_bar(rounds: int) -> int:
     return max(1, math.ceil(ROOKIE_FULL_SEASON_RACE_SHARE * rounds))
 
 
-def _full_seasons_before(driver_id: str, before: int, needed: int) -> int:
-    """Full seasons in the driver's career before `before`, counting back
-    from the most recent and stopping once `needed` are found."""
+def _counts_as_season(season: int, starts: int) -> bool:
+    if season < ROOKIE_ANY_START_COUNTS_BEFORE:
+        return starts > 0
+    return starts >= full_season_bar(_rounds_in(season))
+
+
+def _seasons_of_experience(driver_id: str, before: int, needed: int, partial_bar: int) -> int:
+    """Seasons of experience in the driver's career before `before`, counting
+    back from the most recent and stopping once `needed` are found: full
+    seasons, plus one for every `partial_bar` starts in partial ones."""
     found = 0
-    for season in sorted((s for s in _seasons_raced(driver_id) if FIRST_SEASON <= s < before), reverse=True):
-        if _starts_in(driver_id, season) >= full_season_bar(_rounds_in(season)):
+    partial = 0
+    for season in sorted((s for s in _seasons_raced(driver_id) if FIRST_CHAMPIONSHIP_SEASON <= s < before), reverse=True):
+        starts = _starts_in(driver_id, season)
+        if _counts_as_season(season, starts):
             found += 1
-            if found >= needed:
-                break
+        else:
+            partial += starts
+            if partial >= partial_bar:
+                found += 1
+                partial -= partial_bar
+        if found >= needed:
+            break
     return found
 
 
 def rookie_codes(season: int, race_df: pd.DataFrame) -> set[str]:
     """Codes of this season's drivers with fewer than ROOKIE_SEASON_THRESHOLD
-    full seasons before it.
+    seasons of experience before it (see config for what counts).
 
     Most of a grid raced all of last season, so last season's results (one
     season-level fetch, shared with its own grades) settle most drivers at
@@ -89,28 +109,30 @@ def rookie_codes(season: int, race_df: pd.DataFrame) -> set[str]:
     no career before it to tell them from a newcomer.
     """
     starts = race_df.groupby("driver_id")["round"].nunique()
-    regulars = starts.index[starts >= min_races_for_grade(int(race_df["round"].nunique()))]
+    regulars = starts.index[starts >= min_races_for_grade(grading_rounds(race_df))]
     if len(regulars):
         race_df = race_df[race_df["driver_id"].isin(regulars)]
-    if season <= FIRST_SEASON:
+    if season <= FIRST_CHAMPIONSHIP_SEASON:
         return set()
     previous = fetch_race_results(season - 1)
-    if previous.empty:
-        previous_starts: dict[str, int] = {}
-        previous_bar = None
-    else:
-        previous_starts = previous.groupby("driver_id")["round"].nunique().to_dict()
-        previous_bar = full_season_bar(int(previous["round"].nunique()))
+    previous_starts = (
+        previous.groupby("driver_id")["round"].nunique().to_dict() if not previous.empty else {}
+    )
+    partial_bar = full_season_bar(grading_rounds(race_df))
 
     rookies = set()
     entrants = race_df[["driver_id", "driver_code"]].drop_duplicates("driver_id")
     for driver_id, code in entrants.itertuples(index=False):
-        full = 0
-        if previous_bar is not None and previous_starts.get(driver_id, 0) >= previous_bar:
-            full = 1
-        if full < ROOKIE_SEASON_THRESHOLD:
-            full += _full_seasons_before(driver_id, season - 1, ROOKIE_SEASON_THRESHOLD - full)
-        if full < ROOKIE_SEASON_THRESHOLD:
+        # Last season settles most of a grid without a career lookup.
+        if _counts_as_season(season - 1, previous_starts.get(driver_id, 0)):
+            experience, before = 1, season - 1
+        else:
+            experience, before = 0, season
+        if experience < ROOKIE_SEASON_THRESHOLD:
+            experience += _seasons_of_experience(
+                driver_id, before, ROOKIE_SEASON_THRESHOLD - experience, partial_bar
+            )
+        if experience < ROOKIE_SEASON_THRESHOLD:
             rookies.add(code)
     return rookies
 

@@ -29,10 +29,13 @@ def championship_table(race_df: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataF
     standings request per round): the points are the ones the results
     carry, half-points races included, and ties are broken the FIA way, by
     countback of Grand Prix finishes — most wins, then most seconds, and so
-    on.
+    on. Drivers who are still level after that keep the order they had
+    after the previous round, as in the official standings, so a dead heat
+    never hands over the lead.
     """
     totals: dict[str, float] = defaultdict(float)
     finishes: dict[str, Counter] = defaultdict(Counter)
+    previous: dict[str, int] = {}
     rows = []
     for round_number in sorted(race_df["round"].unique()):
         for row in weekend[weekend["round"] == round_number].itertuples():
@@ -42,9 +45,16 @@ def championship_table(race_df: pd.DataFrame, weekend: pd.DataFrame) -> pd.DataF
                 finishes[row.driver_code][int(row.finish_pos)] += 1
 
         def countback(code: str):
-            return (-totals[code], *(-finishes[code][p] for p in range(1, _COUNTBACK_DEPTH + 1)), code)
+            return (
+                -totals[code],
+                *(-finishes[code][p] for p in range(1, _COUNTBACK_DEPTH + 1)),
+                previous.get(code, len(previous) + 1),
+                code,
+            )
 
-        for position, code in enumerate(sorted(totals, key=countback), start=1):
+        order = sorted(totals, key=countback)
+        previous = {code: position for position, code in enumerate(order, start=1)}
+        for position, code in enumerate(order, start=1):
             rows.append({
                 "round": int(round_number),
                 "driver_code": code,

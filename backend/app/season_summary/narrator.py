@@ -85,6 +85,9 @@ _REPORT_SCHEMA = {
 # crowd out the season itself (and overflow Cerebras' small context).
 _MAX_PART_TIME_DRIVERS = 12
 _MAX_LINEUP_CHANGES = 20
+# A 1950s championship lists over a hundred drivers; the story needs the
+# full-season ones and whoever scored (a whole modern grid fits).
+_MAX_STANDINGS = 25
 
 
 def _capped(items: list, limit: int) -> list:
@@ -94,6 +97,7 @@ def _capped(items: list, limit: int) -> list:
 def _build_user_prompt(context: dict, positions_by_round: dict) -> str:
     decided = context['title_decided']
     part_timers = sorted(context['part_time_drivers'], key=lambda d: (-d['points'], -d['races']))
+    standings = [d for d in context['final_standings'] if not d['part_time'] or d['points'] > 0]
     when = (
         f"with {decided['rounds_left']} round(s) to go"
         if decided['rounds_left']
@@ -103,7 +107,7 @@ def _build_user_prompt(context: dict, positions_by_round: dict) -> str:
 Season: {context['season']} Formula 1 World Championship, {context['rounds']} rounds
 Title decided: {decided['driver_code']}, round {decided['round']} ({decided['race_name']}), {when}
 
-Final Drivers' Standings: {compact(context['final_standings'])}
+Final Drivers' Standings (full-season drivers and point scorers): {compact(_capped(standings, _MAX_STANDINGS))}
 Final Constructors' Standings: {compact(context['constructor_standings'])}
 Race Winners and Podiums: {compact(context['races'])}
 Championship Position After Each Round (the season's top five, round 1 first): {compact(positions_by_round)}
@@ -113,6 +117,7 @@ Other Moments: {compact(context['other_moments'])}
 Dropped scores (only best results counted; standings are official): {'yes' if context.get('official_standings_by_round') else 'no'}
 Rookies: {compact(context['rookies'])}
 Part-Time Drivers (footnotes only, highest scorers first): {compact(_capped([d['summary'] for d in part_timers], _MAX_PART_TIME_DRIVERS))}
+Indianapolis 500 Only (its own field; footnote at most): {compact(_capped([f"{d['driver_name']} {d['result']}" for d in context.get('indianapolis_500_only', [])], 3))}
 Lineup Changes (no reasons given): {compact(_capped(context['lineup_changes'], _MAX_LINEUP_CHANGES))}
 
 Write a full season review as a JSON object with these sections:

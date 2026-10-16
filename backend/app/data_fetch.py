@@ -15,7 +15,7 @@ from .config import (
     API_BASE_URL,
     DEFAULT_RETRY_AFTER_SECONDS,
     FIRST_CONSTRUCTORS_SEASON,
-    FIRST_SEASON,
+    FIRST_CHAMPIONSHIP_SEASON,
     FIRST_SPRINT_SEASON,
     MAX_RETRY_AFTER_SECONDS,
     MAX_RETRY_SLEEP_SECONDS,
@@ -170,6 +170,19 @@ def _shared_once_completed(fetch):
 _season_codes: dict[int, dict[str, str]] = {}
 _season_codes_guard = threading.Lock()
 
+# Every (round, driverId) entered in a season, starters or not. The results
+# drop entrants who failed to qualify, but "did they take part in this
+# round at all" still needs them: a regular who failed to qualify was not
+# replaced by whoever raced that day.
+_season_entrants: dict[int, set[tuple[int, str]]] = {}
+
+
+def was_entered(season: int, round_number: int, driver_id: str) -> bool:
+    """Whether the driver was entered in the round, started or not."""
+    if season not in _season_entrants:
+        fetch_race_results(season)
+    return (int(round_number), driver_id) in _season_entrants.get(season, set())
+
 
 def _letters(text: str) -> str:
     """"Pérez" -> "PEREZ": accents folded, everything but A-Z dropped."""
@@ -286,7 +299,7 @@ def fetch_qualifying_results(season: int) -> pd.DataFrame:
         "season", "round", "race_name", "driver_id", "driver_code", "driver",
         "constructor", "qual_pos", "got_pole",
     ]
-    if season < FIRST_SEASON:
+    if season < FIRST_CHAMPIONSHIP_SEASON:
         return pd.DataFrame(columns=columns)
     rows = []
     for race in _paginate_races("qualifying", season):
@@ -314,16 +327,21 @@ def fetch_qualifying_results(season: int) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
 
 
-# Entrants who failed to (pre-)qualify. Until the 1990s the results list
-# every entrant, so a 1980s race can carry half a dozen of them: counted as
-# starts, they would look like retirements and pass for race experience.
-# Withdrawals ("W") stay, as they always have: a driver who missed the
-# Grand Prix can still have raced that weekend's sprint.
+# Entrants who never started. Until the 1990s the results list every
+# entrant, so a 1980s race can carry half a dozen who failed to (pre-)qualify
+# ("F"), and the 1950s list drivers who withdrew or never took the start
+# ("W": Marimón at the 1954 German GP, killed in practice). Counted as starts,
+# they would look like retirements and pass for race experience. From 2021 a
+# "W" stays: a driver who missed the Grand Prix can still have raced that
+# weekend's sprint (Sainz, Qatar 2023), whose points hang off the race row.
 _DID_NOT_QUALIFY_STATUSES = {"Did not qualify", "Did not prequalify"}
 
 
-def _qualified(res: dict) -> bool:
-    return res.get("positionText", "") != "F" and res.get("status", "") not in _DID_NOT_QUALIFY_STATUSES
+def _started(season: int, res: dict) -> bool:
+    pos_text = res.get("positionText", "")
+    if pos_text == "F" or res.get("status", "") in _DID_NOT_QUALIFY_STATUSES:
+        return False
+    return pos_text != "W" or season >= FIRST_SPRINT_SEASON
 
 
 def _one_row_per_driver_race(df: pd.DataFrame) -> pd.DataFrame:
@@ -362,9 +380,13 @@ _RACE_COLUMNS = [
 
 @_shared_once_completed
 def fetch_race_results(season: int) -> pd.DataFrame:
-    """Every result in every round but failures to qualify, one row per driver per race."""
-    races = _paginate_races("results", season) if season >= FIRST_SEASON else []
-    entries = [(race, res) for race in races for res in race["Results"] if _qualified(res)]
+    """Every starter's result in every round, one row per driver per race."""
+    races = _paginate_races("results", season) if season >= FIRST_CHAMPIONSHIP_SEASON else []
+    with _season_codes_guard:
+        _season_entrants[season] = {
+            (int(race["round"]), res["Driver"]["driverId"]) for race in races for res in race["Results"]
+        }
+    entries = [(race, res) for race in races for res in race["Results"] if _started(season, res)]
     starts: dict[str, set] = {}
     for race, res in entries:
         starts.setdefault(res["Driver"]["driverId"], set()).add(race["round"])
@@ -382,10 +404,15 @@ def fetch_race_results(season: int) -> pd.DataFrame:
         is_classified = pos_text.lstrip("-").isdigit()
         # The classified position, not the classification order: two drivers
         # who shared the winning car (1951 France) are both classified P1.
-        finish_pos = (int(pos_text) if pos_text.isdigit() else int(res["position"])) if is_classified else None
+        finish_pos = (int(pos_text) if pos_text.isdigit() else int(order)) if is_classified else None
         dnf = 0 if is_classified else 1
         # Total race time, given only to finishers on the lead lap.
         millis = (res.get("Time") or {}).get("millis")
+
+        # Jolpica leaves out "points" when there are none recorded, and can
+        # send a null grid or position for an old entry.
+        grid = str(res.get("grid") or "")
+        order = str(res.get("position") or "")
 
         rows.append({
             "season": season,
@@ -396,16 +423,16 @@ def fetch_race_results(season: int) -> pd.DataFrame:
             "driver": f"{driver.get('givenName', '')} {driver.get('familyName', '')}".strip(),
             "constructor": constructor.get("name", ""),
             # 0 is a pit-lane start, or in the early decades an unknown slot.
-            "grid_pos": int(res["grid"]) if res["grid"].isdigit() else None,
+            "grid_pos": int(grid) if grid.isdigit() else None,
             "finish_pos": finish_pos,
             "position_text": pos_text,
             "status": res.get("status", ""),
             "time_millis": float(millis) if millis else None,
-            "points_scored": float(res["points"]),
+            "points_scored": float(res.get("points") or 0),
             "got_win": 1 if pos_text == "1" else 0,
             "dnf": dnf,
             # The classification order, unclassified drivers included.
-            "_order": int(res["position"]),
+            "_order": int(order) if order.isdigit() else 10_000 + len(rows),
         })
 
     return _one_row_per_driver_race(pd.DataFrame(rows, columns=_RACE_COLUMNS + ["_order"]))
@@ -422,7 +449,7 @@ def fetch_sprint_points(season: int) -> pd.DataFrame:
             rows.append({
                 "round": round_num,
                 "driver_code": _driver_code(season, res["Driver"]),
-                "sprint_points": float(res["points"]),
+                "sprint_points": float(res.get("points") or 0),
             })
 
     return pd.DataFrame(rows, columns=["round", "driver_code", "sprint_points"])
@@ -430,6 +457,11 @@ def fetch_sprint_points(season: int) -> pd.DataFrame:
 
 _DRIVER_STANDINGS_COLUMNS = [
     "Position", "Driver", "Driver Code", "Nationality", "Constructor", "Points", "Wins",
+    # False for a driver the championship didn't place (see below), whose
+    # "Position Text" then says why: "-" not classified, "D" disqualified,
+    # "E" excluded.
+    "Classified",
+    "Position Text",
 ]
 
 
@@ -459,36 +491,50 @@ def _driver_standings(season: int, path: str) -> pd.DataFrame:
         return pd.DataFrame(columns=_DRIVER_STANDINGS_COLUMNS)
 
     rows = []
-    excluded = []
+    unplaced = []
     for entry in standings:
         driver = entry["Driver"]
-        constructor = entry["Constructors"][0] if entry["Constructors"] else {}
+        constructor = entry["Constructors"][0] if entry.get("Constructors") else {}
         row = {
             "Position": None,
             "Driver": f"{driver.get('givenName', '')} {driver.get('familyName', '')}".strip(),
             "Driver Code": _driver_code(season, driver),
             "Nationality": driver.get("nationality", ""),
             "Constructor": constructor.get("name", ""),
-            "Points": float(entry["points"]),
-            "Wins": int(entry["wins"]),
+            "Points": float(entry.get("points") or 0),
+            "Wins": int(entry.get("wins") or 0),
+            "Classified": True,
+            "Position Text": str(entry.get("positionText") or entry.get("position") or "-"),
         }
-        if str(entry.get("position", "")).isdigit():
+        if str(entry.get("position") or "").isdigit():
             row["Position"] = int(entry["position"])
+            row["Position Text"] = str(row["Position"])
             rows.append(row)
         else:
-            excluded.append(row)
-    # A driver excluded from the championship (Schumacher in 1997) has no
-    # position; they are placed after everyone classified.
-    for i, row in enumerate(excluded, start=len(rows) + 1):
-        row["Position"] = i
-    rows.extend(excluded)
+            unplaced.append(row)
+    # Drivers without a championship position share the one after the last
+    # classified driver: until 2001 only point scorers were classified (the
+    # rest are "-"), and a driver disqualified from the championship
+    # (Schumacher in 1997) has none either. Numbering them in the provider's
+    # order would invent an order the championship never had.
+    shared = (max(r["Position"] for r in rows) if rows else 0) + 1
+    for row in sorted(unplaced, key=lambda r: -r["Points"]):
+        row["Position"] = shared
+        row["Classified"] = False
+        if row["Position Text"] not in ("D", "E"):
+            row["Position Text"] = "-"
+        rows.append(row)
 
-    return pd.DataFrame(rows, columns=_DRIVER_STANDINGS_COLUMNS).sort_values("Position").reset_index(drop=True)
+    return (
+        pd.DataFrame(rows, columns=_DRIVER_STANDINGS_COLUMNS)
+        .sort_values("Position", kind="stable")
+        .reset_index(drop=True)
+    )
 
 
 @_shared_once_completed
 def fetch_driver_standings(season: int) -> pd.DataFrame:
-    if season < FIRST_SEASON:
+    if season < FIRST_CHAMPIONSHIP_SEASON:
         return pd.DataFrame(columns=_DRIVER_STANDINGS_COLUMNS)
     return _driver_standings(season, f"{season}/driverStandings")
 
@@ -508,13 +554,13 @@ def fetch_constructor_standings(season: int) -> pd.DataFrame:
     rows = []
     for entry in _paginate_standings(f"{season}/constructorStandings", "ConstructorStandings"):
         # An excluded constructor has no numeric position; it has no tier.
-        if not str(entry.get("position", "")).isdigit():
+        if not str(entry.get("position") or "").isdigit():
             continue
         rows.append({
             "Position": int(entry["position"]),
             "Constructor": entry["Constructor"].get("name", ""),
-            "Points": float(entry["points"]),
-            "Wins": int(entry["wins"]),
+            "Points": float(entry.get("points") or 0),
+            "Wins": int(entry.get("wins") or 0),
         })
 
     return pd.DataFrame(rows, columns=columns).sort_values("Position").reset_index(drop=True)

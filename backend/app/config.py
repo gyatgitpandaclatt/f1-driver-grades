@@ -6,24 +6,92 @@ from datetime import datetime, timezone
 # no completed rounds, which the API already answers as a "no data yet" empty
 # state, and the previous seasons stay one click away in the season selector.
 #
-# FIRST_SEASON is how far back the selector reaches: every season Jolpica
-# carries, back to the first World Championship. Each finished season costs
-# a few dozen upstream requests the first time it is opened (then it is kept
-# for the life of the process — see cache_base.SeasonCache), so offering all
-# of them is cheap until someone opens one; saved snapshots (snapshots.py)
-# remove even that.
+# FIRST_SEASON is how far back the selector reaches: 2003, the first season
+# with qualifying data for every round and every driver. Before it the data
+# has qualifying for only some rounds (1994-2002) or none at all, and the
+# grid would have to stand in for it in the qualifying score and the
+# head-to-head. Each finished season costs a few dozen upstream requests the
+# first time it is opened (then it is kept for the life of the process — see
+# cache_base.SeasonCache); saved snapshots (snapshots.py) remove even that.
 #
-# The early decades have gaps the code works around rather than hides (see
-# data_fetch.py and pipeline.py): no qualifying data before the mid-1990s
-# (the grid stands in for any round without it), no constructors'
-# championship before 1958 (tiers come from the constructors' points in the
-# results instead), and no three-letter code for most drivers before the
-# 2000s (one is made up from the surname).
-FIRST_SEASON = 1950
+# The code also handles every earlier season Jolpica carries, back to 1950,
+# should FIRST_SEASON ever be lowered: the grid stands in for missing
+# qualifying, there was no constructors' championship before 1958 (tiers
+# come from the constructors' points instead), dropped scores until 1990,
+# the Indianapolis 500 as a round until 1960, and no three-letter code for
+# most drivers before the mid-2000s (one is made up from the surname, which
+# 2003-2004 still need). See data_fetch.py, pipeline.py, career.py and
+# season_summary/.
+FIRST_SEASON = 2003
+# The first World Championship, which careers and rookie checks reach back
+# to whatever the selector offers: a 2003 rookie check reads 2002's results.
+FIRST_CHAMPIONSHIP_SEASON = 1950
 # Sprints began in 2021, the constructors' championship in 1958; earlier
 # seasons skip asking for them.
 FIRST_SPRINT_SEASON = 2021
 FIRST_CONSTRUCTORS_SEASON = 1958
+# Until this season only a constructor's best-placed car scored for it in
+# the constructors' championship; from the next, every car's points count.
+LAST_BEST_CAR_ONLY_SEASON = 1978
+
+# The Indianapolis 500 was a round of the championship from 1950 to 1960,
+# contested by its own American field. Its one-off entrants are folded into a
+# single footnote, and it doesn't count towards the grading bar: a Grand Prix
+# regular who skipped Indianapolis still raced the whole season.
+INDIANAPOLIS_500 = "Indianapolis 500"
+
+
+def is_indianapolis_500(race_name: str) -> bool:
+    return race_name == INDIANAPOLIS_500
+
+
+# Dropped scores. Until 1990 only a driver's best results counted, by the
+# rules below (the same table Jolpica computes its standings from:
+# jolpica/formula_one/fixtures/championship_systems.json). Each season maps to
+# (split, best): split 0 counts the season as one, "front" splits it in halves
+# with the odd round in the first, "back" with the odd round in the second;
+# best is the results counted in each part, or "all_but_one". Seasons not
+# listed count every result. Used to work out when a title was settled.
+_DROPPED_SCORE_SYSTEMS = [
+    (range(1950, 1954), (0, 4)),
+    (range(1954, 1958), (0, 5)),
+    ((1958, 1960, 1963, 1964, 1965), (0, 6)),
+    ((1959, 1961, 1962, 1966), (0, 5)),
+    (range(1967, 1979), ("front", "all_but_one")),
+    ((1979,), ("back", 4)),
+    ((1980,), ("back", 5)),
+    (range(1981, 1991), (0, 11)),
+]
+
+
+def dropped_score_rule(season: int) -> tuple | None:
+    """(split, best) for a season whose championship dropped results, else None."""
+    for seasons, rule in _DROPPED_SCORE_SYSTEMS:
+        if season in seasons:
+            return rule
+    return None
+
+
+def counted_points(points_by_round: dict[int, float], season: int, total_rounds: int) -> float:
+    """A driver's championship points under the season's dropped-score rule:
+    Jolpica's calculate_championship_points, for one driver."""
+    rule = dropped_score_rule(season)
+    if rule is None:
+        return float(sum(points_by_round.values()))
+    split, best = rule
+    if split == 0:
+        parts = [list(points_by_round.values())]
+        sizes = [total_rounds]
+    else:
+        first = (total_rounds + 1) // 2 if split == "front" else total_rounds // 2
+        parts = [[p for r, p in points_by_round.items() if r <= first],
+                 [p for r, p in points_by_round.items() if r > first]]
+        sizes = [first, total_rounds - first]
+    total = 0.0
+    for part, size in zip(parts, sizes):
+        keep = size - 1 if best == "all_but_one" else best
+        total += sum(sorted(part, reverse=True)[:keep])
+    return total
 
 
 def current_season() -> int:
@@ -60,6 +128,14 @@ MIN_RACES_FOR_GRADE = 2
 # still a rookie. Raise the threshold to 2 to count second-year drivers too.
 ROOKIE_SEASON_THRESHOLD = 1
 ROOKIE_FULL_SEASON_RACE_SHARE = MIN_RACE_SHARE_FOR_GRADE
+# Partial seasons add up, though: once a driver's part-time starts reach a
+# full season's worth (this season's bar), they count as a season too, so a
+# journeyman of three half-seasons isn't still a rookie in the fourth.
+# Before ROOKIE_ANY_START_COUNTS_BEFORE, any championship start counts as a
+# season: most Grand Prix careers then ran largely outside the championship
+# (before it, and in non-championship races), and few regulars raced half
+# its rounds, so Villoresi, a pre-war winner, isn't a 1951 rookie.
+ROOKIE_ANY_START_COUNTS_BEFORE = 1960
 
 # Lower tier number = stronger car. A constructor's tier comes from where it
 # sits in that season's constructors' championship (the final order for a
@@ -172,9 +248,11 @@ LINEUP_CHANGE_REASONS = [
 # are the championship's crucial moments.
 SEASON_SUMMARY_TITLE_CONTENDERS = 3
 # Points gained on a rival in one weekend (race + sprint) that count as a
-# swing, when they come from the gainer winning or the rival retiring: a win
-# against a rival's P5, or any retirement against a podium.
-SEASON_SUMMARY_SWING_MIN_POINTS = 15
+# swing, as a share of what a Grand Prix win paid that season, when they come
+# from the gainer winning or the rival retiring. 0.6 is 15 points at today's
+# 25 for a win (a win against a rival's P5, or any retirement against a
+# podium), and 5.4 when a win paid 9.
+SEASON_SUMMARY_SWING_MIN_SHARE_OF_WIN = 0.6
 # Two contenders finishing next to each other within this many seconds were
 # fighting to the flag. There's no lap data season-wide (see PAGE_LIMIT), so
 # this — from the finishing times — is how a battle is recognised.

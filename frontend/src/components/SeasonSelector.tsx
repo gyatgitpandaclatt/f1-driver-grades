@@ -53,7 +53,7 @@ export default function SeasonSelector({ seasons, currentSeason, selectedSeason 
         disabled={seasons.length === 0 || currentSeason == null}
         onChange={(e) => choose(Number(e.target.value))}
       >
-        {/* Every season back to 1950: grouped by decade, so it can be scanned. */}
+        {/* Every season back to 2003, grouped by decade. */}
         {decades(options).map(([decade, seasons]) => (
           <optgroup key={decade} label={`${decade}s`}>
             {seasons.map((season) => (

@@ -86,6 +86,12 @@ class PartTimeDriverOut(BaseModel):
     summary: str
 
 
+class IndianapolisEntrantOut(BaseModel):
+    driver_code: str
+    driver_name: str
+    result: str  # "P1", "DNF – Engine"
+
+
 class LineupChangeOut(BaseModel):
     round: int
     race_name: str
@@ -141,6 +147,9 @@ class SeasonSummaryContext(BaseModel):
     championship_moments: List[MomentOut]
     other_moments: List[MomentOut]
     part_time_drivers: List[PartTimeDriverOut]
+    # 1950-60: drivers whose only race was the Indianapolis 500, a round of
+    # the championship with its own field. One footnote for them all.
+    indianapolis_500_only: List[IndianapolisEntrantOut] = []
     lineup_changes: List[LineupChangeOut]
     rookies: List[str]
     # The summed results don't give the official points — until 1990 only a

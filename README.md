@@ -3,9 +3,9 @@
 Computes S/A/B/C/D letter grades for F1 drivers from live qualifying/race
 results and standings, and displays them in a web UI with feature-importance
 and predicted-vs-actual charts. The current season is live; a season selector
-at the right of the tabs switches every tab to any earlier season, back to the
-first World Championship in 1950, where a Season Summary replaces the Race
-Summary.
+at the right of the tabs switches every tab to any earlier season back to
+2003, the first with qualifying data for every round, where a Season Summary
+replaces the Race Summary.
 
 ## Prerequisites
 
@@ -134,21 +134,21 @@ From `backend/`, on a machine that can reach Jolpica, with
 `GEMINI_API_KEY` and/or `CEREBRAS_API_KEY` in `backend/.env`:
 
 ```
-py -m app.snapshots              # every finished season, 1950 on
+py -m app.snapshots              # every finished season, 2003 on
 py -m app.snapshots 2024 2025    # just these
-py -m app.snapshots 1950-1959    # a range
+py -m app.snapshots 2003-2009    # a range
 py -m app.snapshots --force      # rebuild ones already saved
 py -m app.snapshots --grades-only
 ```
 
 Then commit `backend/snapshots/*.json`; the Docker image picks them up with
-the rest of `backend/`. Every season from 1950 is ~2,500 requests against
-Jolpica's 500/hour, so a full run takes five to six hours, most of it waiting
+the rest of `backend/`. Every season from 2003 is ~600-800 requests against
+Jolpica's 500/hour, so a full run takes one to two hours, much of it waiting
 out the rate limit, which the script does by itself before carrying on. It
 builds the oldest season first, because each season's rookie check reads the
 seasons before it, which are then already in memory. It also writes one
 narrative per season; if the LLM's free tier runs out partway, rerun it the
-next day: saved seasons are skipped. Snapshots are ~40 KB a season, ~3 MB
+next day: saved seasons are skipped. Snapshots are ~40 KB a season, ~1 MB
 for all of them. Rerun it after a season ends to save that one too.
 
 A season without a snapshot is computed live, as before. So is one whose
@@ -161,8 +161,10 @@ rewrite a narrative, rebuild that season's snapshot.
 
 - Nothing needs updating each season. The current season is the calendar year,
   and `FIRST_SEASON` in `backend/app/config.py` sets how far back the
-  season selector reaches (1950, every season Jolpica has). Rookies (fewer than `ROOKIE_SEASON_THRESHOLD`
-  full seasons behind them), constructor tiers (from that season's
+  season selector reaches: 2003, the first season with qualifying data for
+  every round and every driver (before it, the grid would have to stand in
+  for qualifying). Rookies (fewer than `ROOKIE_SEASON_THRESHOLD`
+  seasons of experience behind them; see `config.py` for what counts), constructor tiers (from that season's
   constructors' championship order) and lineup changes (from the entry lists)
   are all derived from the data; `config.py` only holds their thresholds.
   `LINEUP_CHANGE_REASONS` there can optionally say *why* a lineup changed
@@ -180,34 +182,55 @@ rewrite a narrative, rebuild that season's snapshot.
   firsts, plus one standings request a round for a season with dropped
   scores), which is why nothing season-wide reads lap data: a single race's
   laps are ~12 requests.
-- The early decades' data has gaps, each worked around in the open rather
-  than hidden:
+- The data has gaps, each worked around in the open rather than hidden.
+  Three of them apply to the seasons on offer:
   - **No driver codes.** Ergast only has three-letter codes for drivers from
-    about the 2000s on. Everyone else gets one made from their surname
-    (Fangio is FAN), unique within the season, with the season's regulars
-    choosing first.
+    about 2005 on; a few 2003-2004 drivers (da Matta, Panis, Baumgartner)
+    have none. They get one made from their surname, unique within the
+    season, with the season's regulars choosing first.
+  - **Unclassified drivers.** Drivers the championship didn't classify, and
+    a driver disqualified from it, share the position after the last
+    classified driver, shown as NC / DSQ / EX rather than a number none of
+    them held.
+  - **Non-starters.** Results list entrants who failed to qualify (the 107%
+    rule) and, before 2021, drivers who never took the start; they are
+    dropped, since they never raced (from 2021 a non-starter stays, as they
+    may have raced the sprint).
+
+  The rest only matter if `FIRST_SEASON` is lowered (the code handles every
+  season back to 1950):
   - **No qualifying before the mid-1990s.** The starting grid stands in for
     the qualifying order in any round without qualifying data; the
     head-to-head and methodology pages say so for those seasons.
   - **No constructors' championship before 1958.** Car tiers come from the
-    constructors' points in the race results instead.
+    constructors' points in the Grand Prix results instead, makes level on
+    points sharing a place. Until 1978 only a constructor's best-placed car
+    scored for it, so the season summary's "crucial points" count only that
+    car.
   - **Make of car, not entrant.** The data records a car's constructor, not
-    who entered it, so before the 1980s a privateer Maserati or Brabham
-    counts as the works drivers' teammate. The pages say so.
-  - **Dropped scores.** Until 1990 only a driver's best results counted, so
-    summed results crown the wrong champion (Prost outscored Senna in 1988).
-    A season whose summed results don't match the official points has its
-    championship-by-round chart built from the official standings after
-    each round.
-  - **Failures to qualify and shared drives.** Results list entrants who
-    failed to (pre-)qualify, which are dropped: they never started. Until
-    1957 a driver could take over a teammate's car and share its points,
-    appearing twice in one race; they get one result, the better one, with
-    both sets of points.
+    who entered it, so a privateer Maserati or Brabham counts as the works
+    drivers' teammate. A make that ran five or more cars in a Grand Prix is
+    named on the head-to-head and methodology pages, and its pairings are
+    folded away on the head-to-head page.
+  - **Dropped scores.** Until 1990 only a driver's best results counted
+    (`dropped_score_rule` in `config.py`, the same rules Jolpica computes
+    its standings with), so summed results crown the wrong champion (Prost
+    outscored Senna in 1988). Such a season's championship-by-round chart
+    is built from the official standings after each round, and the round
+    the title was settled is worked out under its rule and countback.
+  - **Unclassified before 2002.** Until 2001 only point scorers were
+    classified in the championship, so most of a field shares the
+    unclassified position (Schumacher's 1997 disqualification included).
+  - **Shared drives.** Until 1957 a driver could take over a teammate's car
+    and share its points, appearing twice in one race; they get one result,
+    the better one, with both sets of points.
   - **The Indianapolis 500** was a championship round until 1960, with its
-    own field, so a 1950s season has dozens of one-off entrants. They are
-    part-time drivers like any other: footnoted, not graded, and left out of
-    the rookie checks and the championship chart.
+    own field. It doesn't count towards the half-the-races grading bar, its
+    one-off entrants share a single footnote, and its makes are left out of
+    the pre-1958 car tiers.
+  - **Rookies.** Partial seasons add up to experience, and before 1960 any
+    championship start counts, so pre-war veterans and journeymen aren't
+    labelled rookies. Nobody is a rookie in 1950.
 - The Season Summary page (`/season-summary?season=YYYY`, backed by
   `backend/app/season_summary/`) is for finished seasons only: a quick summary,
   championship position by round, a quarter-by-quarter analysis, the crucial

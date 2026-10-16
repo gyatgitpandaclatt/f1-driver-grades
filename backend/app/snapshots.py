@@ -14,7 +14,7 @@ Write or refresh them from backend/, on a machine that can reach Jolpica
 
     python -m app.snapshots              # every finished season on offer
     python -m app.snapshots 2024 2025    # just these
-    python -m app.snapshots 1950-1959    # a range
+    python -m app.snapshots 2003-2009    # a range
     python -m app.snapshots --force      # rebuild existing ones too
 
 then commit backend/snapshots/*.json. A season without a snapshot is
@@ -86,9 +86,9 @@ def prefer_snapshot(kind: str, compute: Callable[[int], dict]) -> Callable[[int]
 
 # --- the script ---------------------------------------------------------------
 
-# Jolpica answers a burst with 429 + Retry-After, and every season from 1950
-# is ~2,500 requests against its 500 an hour, so a full run spends most of
-# its time waiting out the hourly limit: five to six hours. Each wait resumes
+# Jolpica answers a burst with 429 + Retry-After, and every season on offer
+# (2003 on) is ~600-800 requests against its 500 an hour, so a full run
+# spends much of its time waiting out the hourly limit: one to two hours. Each wait resumes
 # cheaply: what a season already fetched is kept in memory (see data_fetch),
 # so only the rest is asked for again. Waits are capped at
 # MAX_RETRY_AFTER_SECONDS, so this many covers well over an hour per season.
@@ -119,7 +119,7 @@ def _write(path: Path, data: dict) -> None:
 
 
 def _season_range(text: str) -> list[int]:
-    """"1988" -> [1988]; "1950-1959" -> [1950, ..., 1959]."""
+    """"2008" -> [2008]; "2003-2009" -> [2003, ..., 2009]."""
     try:
         first, _, last = text.partition("-")
         start, end = int(first), int(last or first)
@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "seasons", nargs="*", type=_season_range,
-        help=f"finished seasons to save, e.g. 1988 or 1950-1959 (default: all, {finished[0]}-{finished[-1]})",
+        help=f"finished seasons to save, e.g. 2008 or 2003-2009 (default: all, {finished[0]}-{finished[-1]})",
     )
     parser.add_argument("--force", action="store_true", help="rebuild snapshots that already exist")
     parser.add_argument(

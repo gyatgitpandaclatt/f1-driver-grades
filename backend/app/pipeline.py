@@ -6,10 +6,11 @@ from .aggregate import (
     assign_season_label,
     build_driver_season_table,
     filter_gradeable_drivers,
+    grading_rounds,
     min_races_for_grade,
 )
 from .career import rookie_codes
-from .config import ROOKIE_SEASON_THRESHOLD, current_season
+from .config import ROOKIE_SEASON_THRESHOLD, current_season, dropped_score_rule, is_indianapolis_500
 from .data_fetch import (
     fetch_constructor_standings,
     fetch_driver_standings,
@@ -37,6 +38,9 @@ def _row_to_driver_dict(row: pd.Series) -> dict:
         "constructor": row["Constructor"],
         "points": float(row["Points"]),
         "position": int(row["Position"]),
+        # "-" not classified in the championship, "D" disqualified from it
+        # (Schumacher, 1997), "E" excluded; otherwise the position itself.
+        "position_text": str(row["Position Text"]),
         "wins": int(row["Wins"]),
         "races": int(row["races"]),
         "is_rookie": bool(row["is_rookie"]),
@@ -95,9 +99,11 @@ def _grid_as_qualifying(qual_df: pd.DataFrame, race_df: pd.DataFrame) -> tuple[p
 def _complete_standings(standings_df: pd.DataFrame, race_df: pd.DataFrame) -> pd.DataFrame:
     """The standings, with anyone who raced but isn't listed added at the end.
 
-    The early championships list only some of their entrants, and the grades
-    are joined on the standings: without this, a driver missing from them
-    would silently vanish from the grades.
+    The grades are joined on the standings: without this, a driver missing
+    from them would silently vanish from the grades. They share the position
+    after the last classified driver with everyone else the championship
+    didn't place (see data_fetch._driver_standings), rather than taking an
+    order the championship never gave them.
     """
     listed = set(standings_df["Driver Code"])
     missing = race_df[~race_df["driver_code"].isin(listed)]
@@ -111,9 +117,11 @@ def _complete_standings(standings_df: pd.DataFrame, race_df: pd.DataFrame) -> pd
         .rename(columns={"driver_code": "Driver Code"})
         .sort_values(["Points", "Wins"], ascending=False)
     )
-    last = int(standings_df["Position"].max()) if not standings_df.empty else 0
-    extra["Position"] = range(last + 1, last + 1 + len(extra))
+    classified = standings_df.loc[standings_df["Classified"].astype(bool), "Position"]
+    extra["Position"] = (int(classified.max()) if len(classified) else 0) + 1
     extra["Nationality"] = ""
+    extra["Classified"] = False
+    extra["Position Text"] = "-"
     return pd.concat([standings_df, extra[standings_df.columns]], ignore_index=True)
 
 
@@ -121,20 +129,52 @@ def _constructor_order(constructor_standings: pd.DataFrame, race_df: pd.DataFram
     """The constructors' championship order, for the car tiers.
 
     There was no constructors' championship before 1958; its order is then
-    the constructors' points as the race results give them.
+    the constructors' points in the Grand Prix results, the Indianapolis 500
+    left out (its makes raced nowhere else), with makes level on points and
+    wins sharing a place rather than being split alphabetically.
+
+    A constructor that raced but isn't in the standings (the championship
+    lists only scorers in some seasons) and scored nothing is put last, so
+    it gets the weakest-car tier, not the default meant for the unknown.
     """
+    columns = ["Position", "Constructor", "Points", "Wins"]
     if not constructor_standings.empty:
-        return constructor_standings, "standings"
-    order = (
-        race_df.groupby("constructor")
-        .agg(Points=("points_scored", "sum"), Wins=("got_win", "sum"))
-        .reset_index()
-        .rename(columns={"constructor": "Constructor"})
-        .sort_values(["Points", "Wins", "Constructor"], ascending=[False, False, True])
-        .reset_index(drop=True)
-    )
-    order["Position"] = range(1, len(order) + 1)
-    return order[["Position", "Constructor", "Points", "Wins"]], "results"
+        order, source = constructor_standings[columns].copy(), "standings"
+    else:
+        grand_prix = race_df[~race_df["race_name"].map(is_indianapolis_500)]
+        order = (
+            grand_prix.groupby("constructor")
+            .agg(Points=("points_scored", "sum"), Wins=("got_win", "sum"))
+            .reset_index()
+            .rename(columns={"constructor": "Constructor"})
+            .sort_values(["Points", "Wins", "Constructor"], ascending=[False, False, True])
+            .reset_index(drop=True)
+        )
+        keys = list(zip(order["Points"], order["Wins"]))
+        order["Position"] = [keys.index(key) + 1 for key in keys]
+        order, source = order[columns], "results"
+    scored = race_df.groupby("constructor")["points_scored"].sum()
+    unlisted = [c for c in scored.index if c not in set(order["Constructor"]) and scored[c] == 0]
+    if unlisted:
+        last = int(order["Position"].max()) + 1 if len(order) else 1
+        order = pd.concat([order, pd.DataFrame({
+            "Position": last, "Constructor": sorted(unlisted), "Points": 0.0, "Wins": 0,
+        })], ignore_index=True)
+    return order, source
+
+
+# A constructor that ran more cars than this in a race was, almost always, a
+# make raced by privateers as well as its works team (the data records the
+# make, not the entrant), so its drivers may not all be teammates. Works teams
+# ran up to four cars (Mercedes in 1955, Ferrari through the 1950s).
+_WORKS_TEAM_MAX_CARS = 4
+
+
+def _makes_with_privateers(race_df: pd.DataFrame) -> list[str]:
+    grand_prix = race_df[~race_df["race_name"].map(is_indianapolis_500)]
+    cars = grand_prix.groupby(["round", "constructor"])["driver_id"].nunique()
+    many = cars[cars > _WORKS_TEAM_MAX_CARS].reset_index()["constructor"]
+    return sorted(set(many))
 
 
 def run_pipeline(season: int) -> dict:
@@ -155,7 +195,7 @@ def run_pipeline(season: int) -> dict:
     # and would stretch the score normalisation the rest of the grid is
     # measured against.
     driver_season_df, min_races = filter_gradeable_drivers(
-        entrants_df, min_races_for_grade(int(model_df["round"].nunique()))
+        entrants_df, min_races_for_grade(grading_rounds(race_df))
     )
     season_labeled_df = assign_season_label(driver_season_df)
 
@@ -239,6 +279,8 @@ def run_pipeline(season: int) -> dict:
             "rookie_season_threshold": ROOKIE_SEASON_THRESHOLD,
             "grid_as_qualifying_rounds": grid_rounds,
             "constructor_tiers_source": tiers_source,
+            "makes_with_privateers": _makes_with_privateers(race_df),
+            "dropped_scores": dropped_score_rule(season) is not None,
             "constructor_tiers": [
                 {
                     "constructor": row.Constructor,

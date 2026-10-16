@@ -1,6 +1,6 @@
 # F1 Driver Grades
 
-Computes S/A/B/C/D letter grades for F1 drivers (the current season and every earlier one, back to 1950) from live qualifying/race results and standings, displaying them in a data-rich web UI with feature-importance and predicted-vs-actual charts.
+Computes S/A/B/C/D letter grades for F1 drivers (the current season and every earlier one back to 2003, the first with full qualifying data) from live qualifying/race results and standings, displaying them in a data-rich web UI with feature-importance and predicted-vs-actual charts.
 
 ## Stack
 
