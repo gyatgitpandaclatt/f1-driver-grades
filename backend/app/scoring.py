@@ -219,7 +219,9 @@ def compute_composite_scores(
         df["pos_score"] = 50.0
 
     df["perf_score"] = ((df["overperf_share"] - df["underperf_share"]).clip(-1, 1) * 50 + 50).round(1)
-    df["grid_score"] = ((-df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1)
+    # avg_finish_minus_grid is qual_pos - finish_pos (see features.py), so it is
+    # positive when a driver gains places: +8 or better scores 100, -8 or worse 0.
+    df["grid_score"] = ((df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1)
     df["teammate_score"] = (df["teammate_pts_ratio"] * 100).clip(0, 100).round(1)
 
     max_qual = df["avg_qual_pos"].max()
