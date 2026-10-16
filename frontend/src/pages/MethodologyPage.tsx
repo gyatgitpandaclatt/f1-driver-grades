@@ -96,9 +96,9 @@ export default function MethodologyPage() {
           execution vs. expectations.
         </li>
         <li>
-          <strong>Grid-to-Finish Improvement Score (17.5% weight)</strong> — negative average
-          finish-minus-grid (better finishes than grid) scaled; drivers who gain positions
-          earn higher scores.
+          <strong>Grid-to-Finish Improvement Score (17.5% weight)</strong> — average places
+          gained from qualifying position to finishing position, scaled around 50; drivers
+          who gain positions earn higher scores, and drivers who lose them score below 50.
         </li>
         <li>
           <strong>Teammate Points Ratio Score (15% weight)</strong> —{" "}
@@ -325,7 +325,7 @@ export default function MethodologyPage() {
           team entered, so their &ldquo;teammates&rdquo; may include private entries.</p>
       )}
 
-      <p><strong>Grid-to-finish outlier capping.</strong> Average finish-minus-grid is capped
+      <p><strong>Grid-to-finish outlier capping.</strong> Average places gained is capped
         at ±8 positions to reduce outlier influence — an exceptional single-race result (e.g.
         gaining 15+ places from a low grid slot) is partially masked in the composite score.</p>
 
