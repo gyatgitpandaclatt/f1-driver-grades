@@ -2,7 +2,7 @@ import math
 
 import pandas as pd
 
-from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE
+from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE, is_indianapolis_500
 
 
 def build_driver_season_table(model_df: pd.DataFrame, rookies: set[str]) -> pd.DataFrame:
@@ -18,6 +18,14 @@ def build_driver_season_table(model_df: pd.DataFrame, rookies: set[str]) -> pd.D
     )
     driver_season_df["is_rookie"] = driver_season_df["driver_code"].isin(rookies).astype(int)
     return driver_season_df
+
+
+def grading_rounds(race_df: pd.DataFrame) -> int:
+    """The rounds the grading bar is a share of: every round but the
+    Indianapolis 500 (a championship round until 1960, with its own field),
+    which a Grand Prix regular didn't enter."""
+    rounds = race_df.drop_duplicates("round")
+    return int((~rounds["race_name"].map(is_indianapolis_500)).sum()) or len(rounds)
 
 
 def min_races_for_grade(completed_rounds: int) -> int:

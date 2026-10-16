@@ -17,6 +17,7 @@ only for drivers whose season could hold one; see career.py.
 from ..data_fetch import (
     fetch_constructor_standings,
     fetch_driver_standings,
+    fetch_driver_standings_after,
     fetch_race_results,
     fetch_sprint_points,
 )
@@ -33,3 +34,10 @@ def fetch_season_data(season: int) -> dict:
         "driver_standings": fetch_driver_standings(season),
         "constructor_standings": fetch_constructor_standings(season),
     }
+
+
+def fetch_standings_by_round(season: int, rounds: list[int]) -> dict:
+    """The official drivers' championship after every round: one request a
+    round, for the seasons whose summed results don't give it (dropped
+    scores, an exclusion; see features.official_championship_table)."""
+    return {r: fetch_driver_standings_after(season, r) for r in rounds}

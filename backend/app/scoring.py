@@ -53,8 +53,11 @@ def compute_qual_stats(merged_df: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    # teammate qualifying H2H: for each race, flag who qualified better between teammates
-    qual_h2h = merged_df[["round", "driver_code", "constructor", "qual_pos"]].copy()
+    # teammate qualifying H2H: for each race, flag who qualified better between teammates.
+    # Only rounds where both have a position: a missing one (no time set, or
+    # an annulled result with no grid slot, like Tyrrell's 1984) is no
+    # result, not a loss for both.
+    qual_h2h = merged_df[["round", "driver_code", "constructor", "qual_pos"]].dropna(subset=["qual_pos"])
     qual_h2h = qual_h2h.merge(
         qual_h2h.rename(columns={"driver_code": "tm_code", "qual_pos": "tm_qual_pos"}),
         on=["round", "constructor"],
@@ -178,7 +181,7 @@ def compute_composite_scores(
 ) -> pd.DataFrame:
     code_to_name = standings_df.set_index("Driver Code")["Driver"].to_dict()
 
-    standings_small = standings_df[["Driver Code", "Points", "Position", "Wins"]].rename(
+    standings_small = standings_df[["Driver Code", "Points", "Position", "Wins", "Position Text"]].rename(
         columns={"Driver Code": "driver_code"}
     )
 
@@ -219,7 +222,11 @@ def compute_composite_scores(
         df["pos_score"] = 50.0
 
     df["perf_score"] = ((df["overperf_share"] - df["underperf_share"]).clip(-1, 1) * 50 + 50).round(1)
-    df["grid_score"] = ((-df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1)
+    # avg_finish_minus_grid is qual_pos - finish_pos (see features.py), so it is
+    # positive when a driver gains places: +8 or better scores 100, -8 or worse 0.
+    # Neutral for a driver with no race finished from a known grid slot (every
+    # race a retirement, or an unrecorded grid).
+    df["grid_score"] = ((df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1).fillna(50.0)
     df["teammate_score"] = (df["teammate_pts_ratio"] * 100).clip(0, 100).round(1)
 
     max_qual = df["avg_qual_pos"].max()
@@ -229,11 +236,16 @@ def compute_composite_scores(
     # Neutral score rather than a NaN/inf blowup.
     if pd.notna(max_qual) and pd.notna(min_qual) and max_qual > min_qual:
         df["qual_pos_score"] = ((max_qual - df["avg_qual_pos"]) / (max_qual - min_qual) * 100).clip(0, 100).round(1)
+        # A driver with no qualifying position at all (Tyrrell's annulled 1984
+        # results keep no grid slots) is neutral, like a missing teammate.
+        df["qual_pos_score"] = df["qual_pos_score"].fillna(50.0)
     else:
         df["qual_pos_score"] = 50.0
 
     max_pole = df["pole_rate"].max()
     df["qual_pole_score"] = (df["pole_rate"] / (float(max_pole) if pd.notna(max_pole) and float(max_pole) > 0 else 1) * 100).clip(0, 100).round(1)
+    # No qualifying data, no poles known: the score almost everyone has.
+    df["qual_pole_score"] = df["qual_pole_score"].fillna(0.0)
     df["qual_h2h_score"] = (df["qual_tm_h2h"] * 100).clip(0, 100).round(1)
     df["qual_score"] = (
         df["qual_pos_score"] * 0.60 +

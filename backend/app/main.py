@@ -150,10 +150,11 @@ def _warm_caches() -> None:
     # it here so the first visitor to /race-summary reads a cache instead of
     # waiting out the whole pipeline.
     #
-    # Current season only. Warming every previous season too would spend a
-    # few hundred upstream requests (against a 500/hour limit) and five LLM
-    # calls on every cold start, for pages few visits open; each is computed
-    # on first view instead and then kept for the life of the process.
+    # Current season only. Warming every previous season too would spend
+    # thousands of upstream requests (against a 500/hour limit) and an LLM
+    # call per season on every cold start, for pages few visits open; each is
+    # served from its snapshot, or computed on first view and then kept for
+    # the life of the process.
     season = current_season()
     logger.info("Startup warm beginning for season %s", season)
     cache.try_warm_cache(season)

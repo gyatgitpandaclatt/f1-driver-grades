@@ -11,12 +11,16 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from .. import lineups
-from ..aggregate import min_races_for_grade
+from ..aggregate import grading_rounds, min_races_for_grade
 from ..career import rookie_codes
 from ..config import is_completed_season
 from ..exceptions import NoRaceDataError
 from ..scoring import primary_constructors
 from . import events, features, ingestion, narrator
+
+
+# Wider than any modern grid, so a modern season's chart draws everyone.
+_CHART_MAX_FIELD = 26
 
 
 def run_season_summary_pipeline(season: int) -> dict:
@@ -35,12 +39,18 @@ def run_season_summary_pipeline(season: int) -> dict:
 
     weekend = features.weekend_points(race_df, sprint_df)
     table = features.championship_table(race_df, weekend)
+    official_standings_by_round = not features.counts_every_result(table, driver_standings)
+    if official_standings_by_round:
+        # One request a round, only for the seasons that need it.
+        table = features.official_championship_table(
+            ingestion.fetch_standings_by_round(season, sorted(int(r) for r in race_df["round"].unique()))
+        )
     stats = features.driver_season_stats(race_df, weekend).set_index("driver_code")
     rounds = sorted(int(r) for r in race_df["round"].unique())
 
     # The same bar the grades use, so a driver left out of this season's
     # grades is exactly a driver footnoted here.
-    min_races = min_races_for_grade(len(rounds))
+    min_races = min_races_for_grade(grading_rounds(race_df))
     part_timers = set(stats.index[stats["races"] < min_races])
     rookies = rookie_codes(season, race_df)
 
@@ -99,11 +109,29 @@ def run_season_summary_pipeline(season: int) -> dict:
         "championship_moments": events.title_moments(s, decided),
         "other_moments": events.other_moments(s),
         "part_time_drivers": events.part_time_footnotes(s),
+        "indianapolis_500_only": events.indianapolis_500_only(s),
         "lineup_changes": lineups.lineup_changes(race_df),
         "rookies": sorted(rookies),
+        "official_standings_by_round": official_standings_by_round,
     }
 
     top_five = [entry["driver_code"] for entry in final_standings[:5]]
+    # On the chart: full-season drivers, the final top five, and anyone who
+    # was in the top three after any round (a part-timer can be, early on),
+    # so the lines the title story names are all drawn. A 1950s season had
+    # dozens of one-off entrants, each of whom would be another line.
+    featured = set(table.loc[table["position"] <= 3, "driver_code"])
+    on_chart = table[~table["driver_code"].isin(part_timers) | table["driver_code"].isin(set(top_five) | featured)]
+    # A field bigger than a modern grid (the 1950s had 40-80 full-season
+    # entrants and non-scorers) would stretch the axis to P80 and squeeze the
+    # title fight into a sliver: draw only drivers who were ever in the top 10.
+    if on_chart["driver_code"].nunique() > _CHART_MAX_FIELD:
+        top_ten = set(table.loc[table["position"] <= 10, "driver_code"])
+        on_chart = on_chart[on_chart["driver_code"].isin(top_ten | set(top_five))]
+    # Coloured and named: the final top three, and anyone else who led.
+    leaders = [s.leader(r) for r in rounds]
+    highlight = [entry["driver_code"] for entry in final_standings[:3]]
+    highlight += [code for code in dict.fromkeys(leaders) if code not in highlight][:2]
     positions_by_round = {
         code: [int(p) if pd.notna(p) else None for p in s.positions[code]] for code in top_five
     }
@@ -123,8 +151,8 @@ def run_season_summary_pipeline(season: int) -> dict:
         "sections": sections,
         "context": context,
         "charts": {
-            "standings_series": features.standings_series(table),
+            "standings_series": features.standings_series(on_chart),
             "rounds": [{"round": r, "race_name": s.race_names[r]} for r in rounds],
-            "highlight_drivers": [entry["driver_code"] for entry in final_standings[:3]],
+            "highlight_drivers": highlight,
         },
     }

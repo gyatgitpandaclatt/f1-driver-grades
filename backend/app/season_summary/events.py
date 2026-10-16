@@ -19,16 +19,23 @@ from itertools import combinations
 
 import pandas as pd
 
+from collections import Counter
+
 from .. import career
+from ..data_fetch import was_entered
+from ..scoring import primary_constructors
 from ..config import (
+    LAST_BEST_CAR_ONLY_SEASON,
     SEASON_SUMMARY_CHAMPIONSHIP_DRIVERS,
     SEASON_SUMMARY_CLOSE_FINISH_SECONDS,
     SEASON_SUMMARY_CRUCIAL_POINTS_SHARE,
     SEASON_SUMMARY_MAX_OTHER_MOMENTS,
     SEASON_SUMMARY_MAX_TITLE_MOMENTS,
     SEASON_SUMMARY_MIDFIELD_FROM_POSITION,
-    SEASON_SUMMARY_SWING_MIN_POINTS,
+    SEASON_SUMMARY_SWING_MIN_SHARE_OF_WIN,
     SEASON_SUMMARY_TITLE_CONTENDERS,
+    counted_points,
+    is_indianapolis_500,
 )
 from ..lineups import describe_rounds, driver_names, opening_lineups, stints
 from .features import split_quarters
@@ -43,6 +50,21 @@ def _pts(value: float) -> str:
 
 def _points(value: float) -> str:
     return f"{_pts(value)} pt" if value == 1 else f"{_pts(value)} pts"
+
+
+def _possessive(name: str) -> str:
+    """"Lotus" -> "Lotus's"; "Racing Cars" -> "Racing Cars'"."""
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
+
+
+def _end_sentence(text: str) -> str:
+    """A full stop, unless the text already ends in one ("Wilson Fittipaldi Jr.")."""
+    return text if text.endswith(".") else text + "."
+
+
+def _gap(seconds: float) -> str:
+    """1.234 -> "1.2s"; a photo finish (Monza 1971, 0.01s) keeps its hundredths."""
+    return f"{seconds:.2f}s" if seconds < 0.1 else f"{seconds:.1f}s"
 
 
 def _plural(count: int, word: str) -> str:
@@ -77,9 +99,15 @@ class SeasonData:
             index="round", columns="driver_code", values="points", aggfunc="sum"
         ).fillna(0.0)
         self.final_positions = driver_standings.set_index("Driver Code")["Position"].to_dict()
-        self.championship_drivers = {
-            code for code, pos in self.final_positions.items() if pos <= SEASON_SUMMARY_CHAMPIONSHIP_DRIVERS
-        }
+        # The top five by points, not by position: a driver disqualified from
+        # the championship (Schumacher in 1997) has no position, but his five
+        # wins were not wins from outside the title fight.
+        by_points = driver_standings.sort_values(["Points", "Position"], ascending=[False, True], kind="stable")
+        self.championship_drivers = set(by_points["Driver Code"].head(SEASON_SUMMARY_CHAMPIONSHIP_DRIVERS))
+        # What a Grand Prix win paid (9 in the 1960s, 25 now), for thresholds
+        # that have to mean the same in every era.
+        wins = race_df.loc[race_df["finish_pos"] == 1, "points_scored"]
+        self.win_points = float(wins.median()) if len(wins) else 25.0
         self.results = {r: race_df[race_df["round"] == r].set_index("driver_code") for r in self.rounds}
 
     def leader(self, round_number: int) -> str:
@@ -145,23 +173,65 @@ def _keep_most_important(moments: list[dict], limit: int) -> list[dict]:
     ]
 
 
+def _finish_counts(s: SeasonData, up_to: int, code: str) -> Counter:
+    counts: Counter = Counter()
+    for r in s.rounds:
+        if r > up_to:
+            break
+        finish = s.finish_of(r, code)
+        if finish is not None:
+            counts[int(finish)] += 1
+    return counts
+
+
+def _wins_countback(s: SeasonData, round_number: int, leader: str, rival: str, rival_extra_wins: int) -> bool:
+    """Whether the leader is still ahead on countback if the rival wins
+    every remaining round: most wins, then most seconds, and so on."""
+    ours = _finish_counts(s, round_number, leader)
+    theirs = _finish_counts(s, round_number, rival)
+    theirs[1] += rival_extra_wins
+    for position in range(1, 41):
+        if ours[position] != theirs[position]:
+            return ours[position] > theirs[position]
+    return False
+
+
 def title_decided(s: SeasonData, sprint_rounds: set[int]) -> dict:
     """The first round after which nobody could catch the leader.
 
-    "Could catch" assumes a rival wins every remaining Grand Prix and sprint
-    with the most points anyone scored for one this season (so a fastest-lap
-    bonus counts in the seasons that had one). A title still open at the
-    finale is decided there.
+    A rival's best case is to win every remaining Grand Prix and sprint with
+    the most points anyone scored for one this season (so a fastest-lap
+    bonus counts in the seasons that had one), counted under the season's
+    dropped-score rule (config.counted_points): in 1988 only eleven results
+    counted, so a win could only replace one of Prost's seconds and Senna had
+    the title at Suzuka. When that best case only draws level, the title
+    goes on countback: settled if the leader's finishes still beat the
+    rival's with a win added for every round left (Fangio, Nürburgring 1957).
+    A title still open at the finale is decided there.
     """
     max_race = float(s.weekend["points_scored"].max())
     max_sprint = float(s.weekend["sprint_points"].max())
+    total_rounds = len(s.rounds)
     for i, round_number in enumerate(s.rounds):
         remaining = s.rounds[i + 1:]
-        available = sum(max_race + (max_sprint if r in sprint_rounds else 0.0) for r in remaining)
         leader = s.leader(round_number)
-        runner_up = s.driver_in_position(round_number, 2)
-        lead = s.points.at[round_number, leader] - (s.points.at[round_number, runner_up] if runner_up else 0.0)
-        if lead > available or not remaining:
+        lead_points = float(s.points.at[round_number, leader])
+        settled = True
+        for rival in s.round_points.columns:
+            if rival == leader or not remaining:
+                continue
+            scored = s.round_points.loc[:round_number, rival]
+            best_case = {int(r): float(p) for r, p in scored.items() if p > 0}
+            for r in remaining:
+                best_case[r] = max_race + (max_sprint if r in sprint_rounds else 0.0)
+            ceiling = counted_points(best_case, s.season, total_rounds)
+            if ceiling > lead_points + 1e-9 or (
+                abs(ceiling - lead_points) <= 1e-9
+                and not _wins_countback(s, round_number, leader, rival, len(remaining))
+            ):
+                settled = False
+                break
+        if settled:
             return {
                 "round": round_number,
                 "race_name": s.race_names[round_number],
@@ -200,18 +270,28 @@ def title_moments(s: SeasonData, decided: dict) -> list[dict]:
             new, old = s.leader(r), s.leader(previous)
             runner_up = s.driver_in_position(r, 2)
             margin = s.points.at[r, new] - s.points.at[r, runner_up]
+            # The margin is over whoever is second now, which needn't be the
+            # driver who lost the lead. Level on points, it went on countback
+            # (1988 Hungary): a dead heat keeps the previous order.
+            over = "" if runner_up == old else f" over {runner_up}"
+            by = (
+                f"by {_points(margin)}{over}"
+                if margin > 0
+                else f"level on points with {runner_up}, ahead on countback"
+            )
             moments.append(s.moment(
                 r, "lead_change",
-                f"{new} takes the championship lead from {old} (by {_points(margin)})",
+                f"{new} takes the championship lead from {old} ({by})",
                 [new, old], 4,
             ))
 
         # A swing has to come from a win or a retirement; a big gap between
         # two ordinary finishes is just a weekend.
         swings = []
+        min_swing = SEASON_SUMMARY_SWING_MIN_SHARE_OF_WIN * s.win_points
         for a, b in combinations(contenders, 2):
             delta = s.round_points_of(r, a) - s.round_points_of(r, b)
-            if abs(delta) < SEASON_SUMMARY_SWING_MIN_POINTS:
+            if abs(delta) < min_swing:
                 continue
             gainer, loser = (a, b) if delta > 0 else (b, a)
             if s.finish_of(r, gainer) == 1 or s.finish_of(r, loser) is None:
@@ -239,7 +319,7 @@ def title_moments(s: SeasonData, decided: dict) -> list[dict]:
             position = int(min(ra.finish_pos, rb.finish_pos))
             moments.append(s.moment(
                 r, "contender_duel",
-                f"{ahead} beats {behind} to P{position} by {gap:.1f}s",
+                f"{ahead} beats {behind} to P{position} by {_gap(gap)}",
                 [ahead, behind], 3 if position == 1 else 2,
             ))
 
@@ -252,7 +332,11 @@ def _weekend_result(s: SeasonData, round_number: int, code: str) -> str:
     row = s.weekend[(s.weekend["round"] == round_number) & (s.weekend["driver_code"] == code)].iloc[0]
     parts = []
     if row.points_scored > 0:
-        parts.append(s.result_of(round_number, code))
+        result = s.result_of(round_number, code)
+        # In the 1950s the fastest lap scored a point, even in a car that retired.
+        if s.finish_of(round_number, code) is None:
+            result += ", fastest lap"
+        parts.append(result)
     if row.sprint_points > 0:
         parts.append(f"+{_pts(row.sprint_points)} in the sprint")
     return ", ".join(parts)
@@ -339,6 +423,16 @@ def _crucial_team_points(s: SeasonData) -> list[dict]:
     team_first_round = s.weekend[s.weekend["points"] > 0].groupby("constructor")["round"].min().to_dict()
     first_quarter_end = split_quarters(s.rounds)[0][-1]
 
+    # Until 1978 only a constructor's best-placed car scored for it, so its
+    # weekend is its best car's points, not every car's added up (which gave
+    # Brabham "120% of its season total" in 1971). Its total is rebuilt the
+    # same way, so a share is out of what its weekends actually added up to:
+    # the official total also drops results in some of those seasons.
+    best_car_only = s.season <= LAST_BEST_CAR_ONLY_SEASON
+    team_weekends = s.weekend[s.weekend["points"] > 0].groupby(["constructor", "round"])["points"]
+    team_weekend_points = team_weekends.max() if best_car_only else team_weekends.sum()
+    rebuilt_totals = team_weekend_points.groupby(level="constructor").sum().to_dict()
+
     scored = s.weekend[
         (s.weekend["points"] > 0)
         & s.weekend["constructor"].isin(midfield)
@@ -347,19 +441,21 @@ def _crucial_team_points(s: SeasonData) -> list[dict]:
     by_team: dict[str, list[dict]] = {}
     for (team, r), rows in scored.groupby(["constructor", "round"]):
         r = int(r)
+        if best_car_only:
+            rows = rows.sort_values("points", ascending=False).head(1)
         points = float(rows["points"].sum())
-        total = team_points.get(team, 0.0)
-        share = points / total if total > 0 else 0.0
+        total = rebuilt_totals.get(team, 0.0)
+        share = min(1.0, points / total) if total > 0 else 0.0
         drought_over = team_first_round.get(team) == r and r > first_quarter_end
         if not (share >= SEASON_SUMMARY_CRUCIAL_POINTS_SHARE or drought_over):
             continue
         rival, rival_points = team_below.get(team, (None, None))
-        decisive = rival is not None and total - points < rival_points
+        decisive = rival is not None and team_points.get(team, 0.0) - points < rival_points
         reasons = []
         if drought_over:
-            reasons.append(f"{team}'s first points of the season")
+            reasons.append(f"{_possessive(team)} first points of the season")
         if share >= SEASON_SUMMARY_CRUCIAL_POINTS_SHARE:
-            reasons.append(f"{share:.0%} of {team}'s season total")
+            reasons.append(f"{share:.0%} of {_possessive(team)} season total")
         if decisive:
             reasons.append(f"without them, {team} would have finished behind {rival}")
         drivers = list(rows.sort_values("points", ascending=False)["driver_code"])
@@ -400,13 +496,52 @@ def _career_firsts(s: SeasonData, code: str, rows: pd.DataFrame) -> list[str]:
     return firsts
 
 
+def _indianapolis_only(s: SeasonData) -> set[str]:
+    """Part-time drivers whose only race of the season was the Indianapolis 500."""
+    indy = {r for r in s.rounds if is_indianapolis_500(s.race_names[r])}
+    if not indy:
+        return set()
+    raced = s.race_df.groupby("driver_code")["round"].agg(set)
+    return {code for code in s.part_timers if raced.get(code, set()) <= indy}
+
+
+def indianapolis_500_only(s: SeasonData) -> list[dict]:
+    """The Indianapolis 500's own field, in finishing order: one footnote for
+    them all rather than one each (33 in some years)."""
+    codes = _indianapolis_only(s)
+    rows = s.race_df[s.race_df["driver_code"].isin(codes)].sort_values(["finish_pos", "driver_code"], na_position="last")
+    return [
+        {"driver_code": row.driver_code, "driver_name": s.names.get(row.driver_code, row.driver_code),
+         "result": _result_text(row)}
+        for row in rows.itertuples()
+    ]
+
+
+def _replaced(s: SeasonData, constructor: str, round_number: int, primary: dict) -> list[str]:
+    """Drivers whose seat a part-timer was in at this round: a full-season
+    driver of this team, who started its season in the car, and who wasn't
+    entered anywhere that round. Being absent from the race isn't enough:
+    in the 1950s a make's first-round "lineup" was a dozen privateers, and
+    until the 1990s a regular could simply have failed to qualify."""
+    if is_indianapolis_500(s.race_names[round_number]):
+        return []
+    return [
+        driver for driver in opening_lineups(s.race_df).get(constructor, [])
+        if driver not in s.part_timers
+        and primary.get(driver) == constructor
+        and not was_entered(s.season, round_number, s.driver_ids[driver])
+    ]
+
+
 def part_time_footnotes(s: SeasonData) -> list[dict]:
     """Every driver who raced too little to count as a full-season driver:
-    whose seat they were in, what they scored, and any career firsts."""
-    opening = opening_lineups(s.race_df)
+    whose seat they were in, what they scored, and any career firsts. The
+    Indianapolis 500's own field is left to indianapolis_500_only."""
     driven = stints(s.race_df)
+    primary = primary_constructors(s.race_df).set_index("driver_code")["constructor"].to_dict()
+    indy_only = _indianapolis_only(s)
     notes = []
-    for code in sorted(s.part_timers, key=lambda c: (min(driven[k][0] for k in driven if k[0] == c), c)):
+    for code in sorted(s.part_timers - indy_only, key=lambda c: (min(driven[k][0] for k in driven if k[0] == c), c)):
         rows = s.race_df[s.race_df["driver_code"] == code]
         car_stints = sorted(
             ({"constructor": team, "rounds": rounds} for (c, team), rounds in driven.items() if c == code),
@@ -414,11 +549,9 @@ def part_time_footnotes(s: SeasonData) -> list[dict]:
         )
         in_place_of: list[str] = []
         for st in car_stints:
-            team_rows = s.race_df[s.race_df["constructor"] == st["constructor"]]
             for r in st["rounds"]:
-                in_car = set(team_rows.loc[team_rows["round"] == r, "driver_code"])
-                for absent in opening.get(st["constructor"], []):
-                    if absent not in in_car and absent not in in_place_of:
+                for absent in _replaced(s, st["constructor"], r, primary):
+                    if absent not in in_place_of:
                         in_place_of.append(absent)
         points = float(s.weekend.loc[s.weekend["driver_code"] == code, "points"].sum())
         best = rows["finish_pos"].min()
@@ -429,7 +562,7 @@ def part_time_footnotes(s: SeasonData) -> list[dict]:
         summary = f"{name} ({code}): {_plural(len(rows), 'race')} — {drove}"
         if in_place_of:
             summary += f", in place of {', '.join(s.names.get(c, c) for c in in_place_of)}"
-        summary += f". {_points(points)}" + (f", best finish P{int(best)}." if pd.notna(best) else ".")
+        summary = _end_sentence(summary) + f" {_points(points)}" + (f", best finish P{int(best)}." if pd.notna(best) else ".")
         if highlights:
             summary += " " + "; ".join(h[0].upper() + h[1:] for h in highlights) + "."
         notes.append({

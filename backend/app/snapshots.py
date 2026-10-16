@@ -14,6 +14,7 @@ Write or refresh them from backend/, on a machine that can reach Jolpica
 
     python -m app.snapshots              # every finished season on offer
     python -m app.snapshots 2024 2025    # just these
+    python -m app.snapshots 2003-2009    # a range
     python -m app.snapshots --force      # rebuild existing ones too
 
 then commit backend/snapshots/*.json. A season without a snapshot is
@@ -85,10 +86,13 @@ def prefer_snapshot(kind: str, compute: Callable[[int], dict]) -> Callable[[int]
 
 # --- the script ---------------------------------------------------------------
 
-# Jolpica answers a burst with 429 + Retry-After; a run over several seasons
-# can trip it. Each wait resumes cheaply: what a season already fetched is
-# kept in memory (see data_fetch), so only the rest is asked for again.
-_MAX_RATE_LIMIT_WAITS = 5
+# Jolpica answers a burst with 429 + Retry-After, and every season on offer
+# (2003 on) is ~600-800 requests against its 500 an hour, so a full run
+# spends much of its time waiting out the hourly limit: one to two hours. Each wait resumes
+# cheaply: what a season already fetched is kept in memory (see data_fetch),
+# so only the rest is asked for again. Waits are capped at
+# MAX_RETRY_AFTER_SECONDS, so this many covers well over an hour per season.
+_MAX_RATE_LIMIT_WAITS = 30
 
 
 def _build(kind: str, season: int) -> dict:
@@ -114,6 +118,18 @@ def _write(path: Path, data: dict) -> None:
     partial.replace(path)
 
 
+def _season_range(text: str) -> list[int]:
+    """"2008" -> [2008]; "2003-2009" -> [2003, ..., 2009]."""
+    try:
+        first, _, last = text.partition("-")
+        start, end = int(first), int(last or first)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a season or a range of seasons") from None
+    if end < start:
+        raise argparse.ArgumentTypeError(f"{text!r} runs backwards")
+    return list(range(start, end + 1))
+
+
 def main(argv: list[str] | None = None) -> int:
     finished = sorted(s for s in available_seasons() if is_completed_season(s))
     parser = argparse.ArgumentParser(
@@ -121,8 +137,8 @@ def main(argv: list[str] | None = None) -> int:
         description="Save finished seasons' grades and season summaries for the site to serve.",
     )
     parser.add_argument(
-        "seasons", nargs="*", type=int,
-        help=f"finished seasons to save (default: all of {', '.join(map(str, finished))})",
+        "seasons", nargs="*", type=_season_range,
+        help=f"finished seasons to save, e.g. 2008 or 2003-2009 (default: all, {finished[0]}-{finished[-1]})",
     )
     parser.add_argument("--force", action="store_true", help="rebuild snapshots that already exist")
     parser.add_argument(
@@ -131,12 +147,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    seasons = sorted(set(args.seasons)) or finished
+    # Oldest first: a season's rookie check reads the seasons before it,
+    # which are then already in memory.
+    seasons = sorted({s for group in args.seasons for s in group}) or finished
     unavailable = [s for s in seasons if s not in finished]
     if unavailable:
         parser.error(
             f"{', '.join(map(str, unavailable))}: not a finished season the site offers "
-            f"(choose from {', '.join(map(str, finished))})"
+            f"(choose from {finished[0]}-{finished[-1]})"
         )
 
     logging.basicConfig(level=logging.WARNING, format="  %(levelname)s %(name)s: %(message)s")

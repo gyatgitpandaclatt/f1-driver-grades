@@ -16,7 +16,12 @@ const FEATURE_LABELS: Record<string, string> = {
   overperf_share: "Overperformance share",
   underperf_share: "Underperformance share",
   is_rookie: "Rookie",
+  races: "Races entered",
 };
+
+// A feature the forest didn't use this season (Rookie in 1950, when nobody
+// is one) is left off rather than drawn as an empty bar.
+const MIN_SHOWN_IMPORTANCE = 0.005;
 
 function pct(value: number): string {
   return `${(value * 100).toFixed(0)}%`;
@@ -43,7 +48,7 @@ export default function FeatureImportanceChart({
   }
 
   const chartData = data
-    .filter((d) => d.feature !== "races")
+    .filter((d) => d.importance >= MIN_SHOWN_IMPORTANCE)
     .map((d) => ({
       feature: FEATURE_LABELS[d.feature] ?? d.feature,
       importance: d.importance,

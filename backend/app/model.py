@@ -32,7 +32,9 @@ def run_model(season_labeled_df: pd.DataFrame):
         )
         return df, None, note, None
 
-    X = df[SEASON_FEATURE_COLS].values
+    # avg_finish_minus_grid is missing for a driver who never finished from a
+    # known grid slot; 0 is "finished where they started", the neutral value.
+    X = df[SEASON_FEATURE_COLS].fillna(0).values
     le = LabelEncoder()
     y = le.fit_transform(df["season_label"])
     label_names = le.classes_

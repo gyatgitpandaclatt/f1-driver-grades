@@ -9,6 +9,9 @@ class DriverGrade(BaseModel):
     constructor: str
     points: float
     position: int
+    # How the championship listed them: the position, or "-" (not
+    # classified), "D" (disqualified) or "E" (excluded).
+    position_text: str = ""
     wins: int
     races: int
     is_rookie: bool
@@ -114,6 +117,18 @@ class Meta(BaseModel):
     rookie_season_threshold: int
     # This season's constructors' championship order and the tiers set from it.
     constructor_tiers: List[ConstructorTier]
+    # Rounds without qualifying data (every round before the mid-1990s),
+    # where the starting grid stood in for the qualifying order.
+    grid_as_qualifying_rounds: List[int] = []
+    # "standings": the constructors' championship. "results": the
+    # constructors' points in the race results, for the seasons before the
+    # championship began in 1958.
+    constructor_tiers_source: Literal["standings", "results"] = "standings"
+    # Constructors that ran five or more cars in a Grand Prix: a make raced
+    # by privateers too, whose drivers may not all be teammates.
+    makes_with_privateers: List[str] = []
+    # Only a driver's best results counted (to 1990): points are counted points.
+    dropped_scores: bool = False
 
 
 class DriverGradesResponse(BaseModel):
