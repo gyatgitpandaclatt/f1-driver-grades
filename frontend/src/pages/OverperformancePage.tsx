@@ -16,8 +16,9 @@ export default function OverperformancePage() {
       <p className="model-note">
         Based on the share of races each driver finished well ahead of their starting grid
         slot (after penalties; a pit-lane start counts as the back of the field) vs. well behind
-        it or out of the race. Retirements on the first lap are left out. Above the line (50)
-        means overperforming more often than underperforming.
+        it, out in a crash, or disqualified. Other retirements (on the first lap, mechanical, or
+        with no cause recorded) are left out. Above the line (50) means overperforming more
+        often than underperforming.
       </p>
       <DriverBarChart data={data} neutral={50} />
     </div>

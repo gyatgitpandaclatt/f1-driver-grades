@@ -7,8 +7,9 @@ from .features import UNJUDGED_LABELS
 
 
 def _share(labels: pd.Series, label: str) -> float:
-    """The share of a driver's judged races with this label: a first-lap
-    retirement or a race they never started is in neither column."""
+    """The share of a driver's judged races with this label: a race they
+    never started, or a retirement they can't be blamed for, is in neither
+    column (see features.UNJUDGED_LABELS)."""
     judged = labels[~labels.isin(UNJUDGED_LABELS)]
     return float((judged == label).mean()) if len(judged) else 0.0
 

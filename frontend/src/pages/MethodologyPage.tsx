@@ -16,6 +16,8 @@ const LABEL_DISPLAY: Record<string, string> = {
   underperformer: "Underperformer",
   expected: "Expected",
   first_lap_retirement: "Out on lap 1",
+  mechanical_retirement: "Mechanical or other",
+  unrecorded_retirement: "Cause not recorded",
   did_not_start: "Did not start",
   unknown_start: "Start unknown",
 };
@@ -219,9 +221,9 @@ export default function MethodologyPage() {
         <li><strong>Overperformed:</strong> finished ≥3 places ahead of their starting position</li>
         <li>
           <strong>Underperformed:</strong> finished ≥3 places behind their starting position,
-          or didn&rsquo;t finish: retired or disqualified. A car that stopped in the closing laps
-          can still be classified; it keeps its position and points, but counts as a retirement
-          here.
+          retired in a crash (Accident, Collision, Spun off&hellip;) after the first lap, or was
+          disqualified. A car that stopped in the closing laps can still be classified; it keeps
+          its position and points, but counts as a retirement here.
         </li>
         <li><strong>Expected:</strong> finished within 2 places of their starting position</li>
         <li>
@@ -229,7 +231,18 @@ export default function MethodologyPage() {
           the recorded cause. Nearly all of these are crashes, and the data never records who
           caused one (from 2025 it records every retirement as just &ldquo;Retired&rdquo;), so
           it counts for no one involved, the driver who caused it included. That also forgives
-          the rare solo crash or mechanical failure on the first lap.
+          the rare solo crash on the first lap.
+        </li>
+        <li>
+          <strong>Mechanical or other:</strong> retired for a recorded cause that isn&rsquo;t a
+          crash: a mechanical failure, a puncture, illness, the team withdrawing the car. Not
+          the driver&rsquo;s doing, so it counts neither way.
+        </li>
+        <li>
+          <strong>Cause not recorded:</strong> retired with no cause given (the data&rsquo;s bare
+          &ldquo;Retired&rdquo;: every retirement from 2025, most from 2023), or still running at
+          the end but too far behind to be classified. A crash and a breakdown look the same, so
+          it counts neither way.
         </li>
         {season >= 2021 && (
           <li>
@@ -246,8 +259,8 @@ export default function MethodologyPage() {
         <li>Otherwise → <strong>expected</strong></li>
       </ul>
       <p>
-        The frequencies are of the races judged: retirements on the first lap
-        {season >= 2021 ? " and races not started" : ""} are left out.
+        The frequencies are of the races judged: retirements the driver can&rsquo;t be blamed
+        for{season >= 2021 ? " and races not started" : ""} are left out.
       </p>
       <p>
         The 30% threshold filters noise and requires a meaningful pattern before applying a

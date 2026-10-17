@@ -196,12 +196,16 @@ rewrite a narrative, rebuild that season's snapshot.
     rule) and, before 2021, drivers who never took the start; they are
     dropped, since they never raced (from 2021 a non-starter stays, as they
     may have raced the sprint).
-  - **No blame for crashes.** A retirement's status gives at most its cause
-    ("Collision", "Accident"), never who caused it, and from 2025 not even
-    that: every retirement is just "Retired". So retiring on the opening lap
-    (or the lap after), whatever the recorded cause, counts as neither an
-    over- nor an underperformance, for the driver who caused a crash as much
-    as the one hit. That also forgives the rare first-lap mechanical failure.
+  - **Retirement causes.** A retirement's status gives at most its cause
+    ("Engine", "Collision"), never who caused a crash, and from 2025 not
+    even the cause: every retirement is just "Retired" (most of 2023-2024
+    too). So a retirement counts against a driver only when it was a crash
+    after the first lap, or a disqualification. Anything else counts
+    neither way: a retirement on the opening lap or the lap after, whatever
+    its cause (nearly all are crashes, and the data can't say who caused
+    one); any other recorded cause (a breakdown, a puncture, illness); and
+    a retirement with no cause, where a crash and a breakdown look the
+    same, which from 2025 leaves a solo crash uncounted too.
 
   The rest only matter if `FIRST_SEASON` is lowered (the code handles every
   season back to 1950):

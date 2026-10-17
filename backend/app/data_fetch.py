@@ -380,7 +380,7 @@ _RACE_COLUMNS = [
 # The statuses of a car that ran to the end. A classified car can still have
 # retired: one that stops after 90% of the distance is classified, with the
 # cause as its status (Vettel's alternator at Monza in 2012, classified 22nd).
-_FINISHED_STATUS = re.compile(r"Finished|Lapped|\+\d+ Laps?")
+FINISHED_STATUS = re.compile(r"Finished|Lapped|\+\d+ Laps?")
 
 
 @_shared_once_completed
@@ -442,7 +442,7 @@ def fetch_race_results(season: int) -> pd.DataFrame:
             # Not classified: the official DNF.
             "dnf": dnf,
             # Didn't run to the end, classified or not.
-            "retired": 0 if is_classified and _FINISHED_STATUS.fullmatch(status) else 1,
+            "retired": 0 if is_classified and FINISHED_STATUS.fullmatch(status) else 1,
             # The classification order, unclassified drivers included.
             "_order": int(order) if order.isdigit() else 10_000 + len(rows),
         })
