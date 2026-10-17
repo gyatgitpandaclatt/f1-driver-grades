@@ -1,16 +1,35 @@
 import numpy as np
 import pandas as pd
 
-# A retirement in a collision on the opening lap, or from its damage on the
-# lap after (laps completed, so 0 or 1). The data never says who caused a
-# collision, so it counts for no one involved, the culprit included, rather
-# than against the driver who was hit.
-_COLLISION_STATUSES = {"Collision", "Collision damage"}
+from .data_fetch import FINISHED_STATUS
+
+# A retirement on the opening lap, or the lap after (laps completed, so 0 or
+# 1), whatever its recorded cause. Nearly all are crashes, and the data never
+# says who caused one: from 2025 Jolpica records every retirement as just
+# "Retired", and its "Accident" covers multi-car pile-ups (Singapore 2017).
+# So it counts for no one involved, the culprit included, rather than
+# against the driver who was hit.
 _FIRST_LAP_LAPS = 1
+
+# After the first lap, only a retirement the driver can be blamed for counts
+# against them: a crash, or a disqualification. Any other recorded cause (a
+# mechanical failure, a puncture, illness, the team withdrawing the car) is
+# the car's or bad luck.
+_CRASH_STATUSES = {
+    "Accident", "Accident damage", "Collision", "Collision damage", "Spun off", "Damage",
+    "Fatal accident",
+}
+_DISQUALIFIED_STATUSES = {"Disqualified", "Excluded"}
+# No cause: Jolpica's bare "Retired" (every retirement from 2025, most from
+# 2023), or a car still running at the end but too far behind to be
+# classified. A crash and a breakdown look the same, so it counts for no one.
+_NO_CAUSE_STATUSES = {"", "Retired", "Not classified"}
 
 # Races with no race-day performance to judge, left out of the over- and
 # underperformance shares (see aggregate.build_driver_season_table).
-UNJUDGED_LABELS = {"did_not_start", "first_lap_collision"}
+UNJUDGED_LABELS = {
+    "did_not_start", "first_lap_retirement", "mechanical_retirement", "unrecorded_retirement",
+}
 
 
 def merge_qualifying_and_race(qual_df: pd.DataFrame, race_df: pd.DataFrame) -> pd.DataFrame:
@@ -71,8 +90,17 @@ def build_target(df: pd.DataFrame) -> pd.DataFrame:
 
     retired_mask = df["retired"] == 1
     did_not_start_mask = df["position_text"] == "W"
-    first_lap_collision_mask = (
-        retired_mask & df["status"].isin(_COLLISION_STATUSES) & (df["laps"] <= _FIRST_LAP_LAPS)
+    # Not a disqualification, and not when the laps completed are unknown (NaN).
+    first_lap_retirement_mask = (
+        (df["position_text"] == "R") & (df["laps"] <= _FIRST_LAP_LAPS)
+    )
+    blamed_mask = retired_mask & (
+        (df["position_text"] == "D")
+        | df["status"].isin(_CRASH_STATUSES | _DISQUALIFIED_STATUSES)
+    )
+    no_cause_mask = retired_mask & (
+        df["status"].isin(_NO_CAUSE_STATUSES)
+        | df["status"].map(lambda s: bool(FINISHED_STATUS.fullmatch(s)))
     )
     # A finisher with no known start (no grid slot and no qualifying
     # position) leaves finish_minus_grid as NaN, and every comparison below
@@ -84,7 +112,9 @@ def build_target(df: pd.DataFrame) -> pd.DataFrame:
 
     conditions = [
         did_not_start_mask,
-        first_lap_collision_mask,
+        first_lap_retirement_mask,
+        blamed_mask,
+        no_cause_mask,
         retired_mask,
         unknown_start_mask,
         df["finish_minus_grid"] >= 3,
@@ -92,8 +122,10 @@ def build_target(df: pd.DataFrame) -> pd.DataFrame:
     ]
     choices = [
         "did_not_start",
-        "first_lap_collision",
+        "first_lap_retirement",
         "underperformed",
+        "unrecorded_retirement",
+        "mechanical_retirement",
         "unknown_start",
         "overperformed",
         "underperformed",
