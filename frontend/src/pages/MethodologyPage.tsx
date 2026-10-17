@@ -128,8 +128,9 @@ export default function MethodologyPage() {
         </li>
         <li>
           <strong>ML Model Agreement Bonus</strong> (flat +0.5 if the season label matches
-          the Random Forest model's predicted label, −0.5 otherwise) — a small confidence
-          signal from the trained classifier.
+          the Random Forest model's predicted label, 0 otherwise) — a small confidence
+          signal from the trained classifier. Disagreement costs nothing, whichever way the
+          model leans.
         </li>
         <li>
           <strong>Car Strength Tier Bonus</strong> (flat, 0–6) — rewards drivers in weaker

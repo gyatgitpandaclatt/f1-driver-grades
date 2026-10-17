@@ -258,9 +258,10 @@ def compute_composite_scores(
     label_bonus = {"overperformer": 4, "expected": 0, "underperformer": -4}
     df["label_bonus"] = df["season_label"].map(label_bonus).fillna(0)
 
-    df["model_bonus"] = df.apply(
-        lambda r: 0.5 if r["season_label"] == r["rf_pred_label"] else -0.5, axis=1
-    )
+    # A reward for agreement, never a penalty: a model that rates a driver
+    # higher than their label does would otherwise cost them points, so a
+    # worse race could raise a score by bringing the two back into line.
+    df["model_bonus"] = (df["season_label"] == df["rf_pred_label"]).astype(float) * 0.5
 
     df["rookie_bonus"] = df["is_rookie"] * 2
 
