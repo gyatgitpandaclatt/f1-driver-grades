@@ -15,7 +15,7 @@ const LABEL_DISPLAY: Record<string, string> = {
   overperformer: "Overperformer",
   underperformer: "Underperformer",
   expected: "Expected",
-  first_lap_collision: "First-lap collision",
+  first_lap_retirement: "Out on lap 1",
   did_not_start: "Did not start",
   unknown_start: "Start unknown",
 };
@@ -219,31 +219,34 @@ export default function MethodologyPage() {
         <li><strong>Overperformed:</strong> finished ≥3 places ahead of their starting position</li>
         <li>
           <strong>Underperformed:</strong> finished ≥3 places behind their starting position,
-          or retired. A car that stopped in the closing laps can still be classified; it keeps
-          its position and points, but counts as a retirement here.
+          or didn&rsquo;t finish: retired or disqualified. A car that stopped in the closing laps
+          can still be classified; it keeps its position and points, but counts as a retirement
+          here.
         </li>
         <li><strong>Expected:</strong> finished within 2 places of their starting position</li>
         <li>
-          <strong>First-lap collision:</strong> retired from a collision on the opening lap, or
-          from its damage on the lap after. The data doesn&rsquo;t record who caused a collision,
-          so it counts for no one involved, the driver who caused it included.
+          <strong>Out on lap 1:</strong> retired on the opening lap, or the lap after, whatever
+          the recorded cause. Nearly all of these are crashes, and the data never records who
+          caused one (from 2025 it records every retirement as just &ldquo;Retired&rdquo;), so
+          it counts for no one involved, the driver who caused it included. That also forgives
+          the rare solo crash or mechanical failure on the first lap.
         </li>
         {season >= 2021 && (
           <li>
-            <strong>Did not start:</strong> missed the Grand Prix, but stays in the results for
-            that weekend&rsquo;s sprint.
+            <strong>Did not start:</strong> missed the Grand Prix. From 2021 the results keep a
+            driver who didn&rsquo;t start, since they may have raced that weekend&rsquo;s sprint.
           </li>
         )}
       </ul>
 
       <p><strong>Seasonal aggregation (30% threshold filter).</strong> The per-driver seasonal label is assigned as follows:</p>
       <ul>
-        <li>Overperformance frequency &gt; underperformance frequency <strong>and</strong> overperformance frequency &gt; 30% of entries → <strong>overperformer</strong></li>
-        <li>Underperformance frequency &gt; overperformance frequency <strong>and</strong> underperformance frequency &gt; 30% of entries → <strong>underperformer</strong></li>
+        <li>Overperformance frequency &gt; underperformance frequency <strong>and</strong> overperformance frequency &gt; 30% of the races judged → <strong>overperformer</strong></li>
+        <li>Underperformance frequency &gt; overperformance frequency <strong>and</strong> underperformance frequency &gt; 30% of the races judged → <strong>underperformer</strong></li>
         <li>Otherwise → <strong>expected</strong></li>
       </ul>
       <p>
-        The frequencies are of the races judged: first-lap collisions
+        The frequencies are of the races judged: retirements on the first lap
         {season >= 2021 ? " and races not started" : ""} are left out.
       </p>
       <p>

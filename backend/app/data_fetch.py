@@ -434,8 +434,8 @@ def fetch_race_results(season: int) -> pd.DataFrame:
             "finish_pos": finish_pos,
             "position_text": pos_text,
             "status": status,
-            # Laps completed.
-            "laps": int(laps) if laps.isdigit() else 0,
+            # Laps completed; None when not recorded.
+            "laps": int(laps) if laps.isdigit() else None,
             "time_millis": float(millis) if millis else None,
             "points_scored": float(res.get("points") or 0),
             "got_win": 1 if pos_text == "1" else 0,
