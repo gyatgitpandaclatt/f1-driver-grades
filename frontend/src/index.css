@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Michroma&family=Titillium+Web:ital,wght@0,700;0,900;1,900&family=Chakra+Petch:wght@600;700&family=Saira:ital,wght@0,600;1,800&display=swap');
 
 :root {
   --background: #0a0a0c;
@@ -13,6 +13,15 @@
   --correct: #00d68f;
   --incorrect: #ffd400;
   --glow: rgba(225, 6, 0, 0.25);
+  --font-display: 'Titillium Web', 'Inter', sans-serif;
+  --car-body: #e10600;
+  --car-trim: #f0f0f5;
+  --car-helmet: #ffd400;
+  --car-tyre: #0d0d10;
+  --car-rim: #3a3a48;
+  --kerb-a: #e10600;
+  --kerb-b: #f0f0f5;
+  --streak: rgba(225, 6, 0, 0.5);
 }
 
 * {
@@ -29,6 +38,20 @@ body {
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.6s ease;
+}
+
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.6s ease;
 }
 
 /* Subtle grid background */
@@ -71,6 +94,7 @@ a {
   position: relative;
   display: inline-block;
   padding: 10px 16px;
+  font-family: var(--font-display);
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -231,6 +255,7 @@ a {
 }
 
 .header h1 {
+  font-family: var(--font-display);
   font-size: 1.4rem;
   font-weight: 800;
   margin: 0;
@@ -651,6 +676,7 @@ td.wrap {
 }
 
 .stat-tile .stat-value {
+  font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -687,4 +713,464 @@ td.wrap {
   flex: 1;
   height: 1px;
   background: var(--border);
+}
+
+/* ══ ERAS ══
+   One look per era of the rules, picked by <html data-era> (set in Layout
+   from the selected season). :root above is the DRS era; the others override it. The
+   grade colours and the charts stay the same in every era: they carry data. */
+
+/* 2003-2010: silver and FOM blue, scan-lined like a 2000s TV feed. */
+:root[data-era="refuelling"] {
+  --background: #090c13;
+  --surface: #10141d;
+  --surface-2: #171c28;
+  --border: #212839;
+  --border-bright: #33405a;
+  --text-secondary: #8090b0;
+  --accent: #4d8dff;
+  --accent-dim: rgba(77, 141, 255, 0.14);
+  --glow: rgba(77, 141, 255, 0.3);
+  --font-display: 'Michroma', 'Inter', sans-serif;
+  --car-body: #c9d1dc;
+  --car-trim: #e10600;
+  --car-helmet: #f0f0f5;
+  --car-rim: #8a93a3;
+  --kerb-a: #e10600;
+  --kerb-b: #e8ecf2;
+  --streak: rgba(200, 215, 240, 0.45);
+}
+
+/* 2022-2025: purple-sector neon on near-black, a lit grid for a track floor. */
+:root[data-era="ground-effect"] {
+  --background: #07060c;
+  --surface: #0f0d17;
+  --surface-2: #171423;
+  --border: #241f36;
+  --border-bright: #3a3157;
+  --text-secondary: #8d84b0;
+  --accent: #c06bff;
+  --accent-dim: rgba(192, 107, 255, 0.14);
+  --glow: rgba(192, 107, 255, 0.35);
+  --font-display: 'Chakra Petch', 'Inter', sans-serif;
+  --car-body: #3a2f6e;
+  --car-trim: #c06bff;
+  --car-helmet: #3de8ff;
+  --car-rim: #3de8ff;
+  --kerb-a: #c06bff;
+  --kerb-b: #3de8ff;
+  --streak: rgba(61, 232, 255, 0.45);
+}
+
+/* 2026-: electric. Volt amber for deployed energy, cyan for the battery. */
+:root[data-era="hybrid"] {
+  --background: #060a0d;
+  --surface: #0c1216;
+  --surface-2: #121a20;
+  --border: #1b262e;
+  --border-bright: #2a3a45;
+  --text-secondary: #7e98a6;
+  --accent: #ffc400;
+  --accent-dim: rgba(255, 196, 0, 0.12);
+  --glow: rgba(255, 196, 0, 0.3);
+  --font-display: 'Saira', 'Inter', sans-serif;
+  --car-body: #e8edf0;
+  --car-trim: #ffc400;
+  --car-helmet: #00e0ff;
+  --car-rim: #00e0ff;
+  --kerb-a: #ffc400;
+  --kerb-b: #00e0ff;
+  --streak: rgba(0, 224, 255, 0.5);
+}
+
+/* ── BACKDROP ── */
+.race-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.backdrop-texture,
+.backdrop-floor {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.6s ease;
+}
+
+/* DRS era: carbon-fibre weave with a red glow off the top. */
+.backdrop-texture {
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, var(--accent-dim), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 6px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.35) 0 2px, transparent 2px 6px);
+}
+
+[data-era="refuelling"] .backdrop-texture {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -5%, rgba(160, 185, 230, 0.12), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px);
+}
+
+[data-era="ground-effect"] .backdrop-texture {
+  background:
+    radial-gradient(ellipse 50% 35% at 85% 0%, rgba(192, 107, 255, 0.16), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 0% 100%, rgba(61, 232, 255, 0.08), transparent 70%);
+}
+
+/* Hybrid: a faint circuit-board grid with an amber charge glowing off the top. */
+[data-era="hybrid"] .backdrop-texture {
+  background:
+    radial-gradient(ellipse 55% 35% at 50% -5%, rgba(255, 196, 0, 0.12), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 100% 100%, rgba(0, 224, 255, 0.08), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 224, 255, 0.035) 0 1px, transparent 1px 88px),
+    repeating-linear-gradient(0deg, rgba(0, 224, 255, 0.035) 0 1px, transparent 1px 88px);
+}
+
+/* The neon track floor, only in the ground-effect era: a grid rushing toward you. */
+.backdrop-floor {
+  opacity: 0;
+}
+
+[data-era="ground-effect"] .backdrop-floor {
+  opacity: 1;
+  top: 55%;
+  inset-inline: -50%;
+  background-image:
+    linear-gradient(rgba(192, 107, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(61, 232, 255, 0.12) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: perspective(300px) rotateX(60deg);
+  transform-origin: top;
+  mask-image: linear-gradient(to bottom, transparent, #000 40%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%);
+  animation: floor-rush 1.2s linear infinite;
+}
+
+@keyframes floor-rush {
+  to { background-position: 0 60px; }
+}
+
+.speed-streak {
+  position: absolute;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--streak), transparent);
+  opacity: 0.35;
+  animation: streak-by linear infinite;
+  will-change: transform;
+}
+
+@keyframes streak-by {
+  from { transform: translateX(110vw); }
+  to { transform: translateX(-110vw); }
+}
+
+/* Chequered flag swept across when the era changes. */
+.era-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background:
+    repeating-conic-gradient(#0a0a0c 0 25%, #f0f0f5 0 50%) 0 0 / 48px 48px;
+  box-shadow: 0 0 60px 20px var(--glow);
+  opacity: 0.92;
+}
+
+/* ── ERA HERO ── */
+.era-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "copy lights" "track track";
+  gap: 14px 24px;
+  padding: 22px 22px 0;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--surface) 0%, transparent 80%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* A racing stripe down the left edge, in the era's colour. */
+.era-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+  box-shadow: 0 0 16px var(--glow);
+}
+
+.era-copy {
+  grid-area: copy;
+  min-width: 0;
+}
+
+.era-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.era-years {
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 8px;
+  border-radius: 3px;
+  transform: skewX(-12deg);
+}
+
+[data-era="hybrid"] .era-years {
+  color: #0a0a0c;
+}
+
+.era-season {
+  color: var(--text-secondary);
+}
+
+.era-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3.6vw, 2.3rem);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 10px 0 6px;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+/* Michroma is wide and has no italic or heavy weight: smaller, upright. */
+[data-era="refuelling"] .era-name {
+  font-style: normal;
+  font-size: clamp(1.05rem, 2.6vw, 1.7rem);
+  background: linear-gradient(180deg, #ffffff 0%, #b8c4d8 55%, #6f7d96 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-era="ground-effect"] .era-name {
+  font-style: normal;
+  text-shadow: 0 0 18px var(--glow);
+}
+
+.era-tagline {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* Five lights on a gantry. */
+.start-lights {
+  grid-area: lights;
+  align-self: start;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: #050507;
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+}
+
+.start-light {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1a0606;
+}
+
+.start-light i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ff1e1e;
+  box-shadow: 0 0 12px 2px rgba(255, 30, 30, 0.7);
+}
+
+/* The lane the car runs in: kerbs top and bottom, tarmac with a dashed line. */
+.era-track {
+  grid-area: track;
+  position: relative;
+  height: 92px;
+  margin: 0 -22px;
+  overflow: hidden;
+  background: linear-gradient(180deg, transparent 0 8px, rgba(0,0,0,0.35) 8px);
+}
+
+.track-scroll {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 200%;
+  background:
+    repeating-linear-gradient(90deg, var(--kerb-a) 0 24px, var(--kerb-b) 24px 48px) top / 100% 8px no-repeat,
+    repeating-linear-gradient(90deg, var(--kerb-a) 0 24px, var(--kerb-b) 24px 48px) bottom / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.22) 0 40px, transparent 40px 96px) 0 58% / 100% 2px no-repeat;
+  animation: track-scroll 0.6s linear infinite;
+  will-change: transform;
+}
+
+/* 48px and 96px both divide 192: the loop is seamless. */
+@keyframes track-scroll {
+  to { transform: translateX(-192px); }
+}
+
+.car-slot {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 300px;
+  margin-left: -150px;
+}
+
+/* A motion-blur trail off the back of the car. */
+.car-slot::before {
+  content: '';
+  position: absolute;
+  right: 92%;
+  top: 38%;
+  width: 180px;
+  height: 34%;
+  background: linear-gradient(90deg, transparent, var(--streak));
+  filter: blur(6px);
+  opacity: 0.8;
+}
+
+.race-car {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  animation: car-idle 0.18s ease-in-out infinite alternate;
+}
+
+[data-era="ground-effect"] .race-car,
+[data-era="hybrid"] .race-car {
+  filter: drop-shadow(0 0 6px var(--glow));
+}
+
+@keyframes car-idle {
+  to { transform: translateY(-0.6px); }
+}
+
+.wheel-spokes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wheel-spin 0.25s linear infinite;
+}
+
+@keyframes wheel-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 2026: the energy store charging and spending, and the modes that spend it
+   lighting in turn. */
+.ers-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ers-label {
+  color: var(--car-rim);
+}
+
+.ers-bar {
+  width: 120px;
+  height: 8px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--surface-2) 0 10px, var(--background) 10px 12px);
+  border: 1px solid var(--border-bright);
+  overflow: hidden;
+}
+
+.ers-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--car-rim), var(--accent));
+  box-shadow: 0 0 8px var(--glow);
+  transform-origin: left;
+  animation: ers-charge 6s ease-in-out infinite;
+}
+
+/* Recharge, then deploy: Straight Mode, Overtake, Boost. */
+@keyframes ers-charge {
+  0% { transform: scaleX(0.3); }
+  30% { transform: scaleX(1); }
+  100% { transform: scaleX(0.3); }
+}
+
+.ers-mode {
+  padding: 2px 8px;
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  animation: ers-mode 6s linear infinite;
+}
+
+/* :nth-of-type counts the spans: label, bar, then the three modes. */
+.ers-mode:nth-of-type(4) { animation-delay: 2s; }
+.ers-mode:nth-of-type(5) { animation-delay: 4s; }
+
+@keyframes ers-mode {
+  0%, 30%, 100% { color: var(--text-secondary); background: transparent; border-color: var(--border-bright); box-shadow: none; }
+  1%, 29% { color: #0a0a0c; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px var(--glow); }
+}
+
+/* Active aero: the wing flaps open on the straight and close for the corner. */
+.aero-flaps {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: aero-flap 3s ease-in-out infinite;
+}
+
+@keyframes aero-flap {
+  0%, 45%, 100% { transform: rotate(0deg); }
+  55%, 90% { transform: rotate(-14deg); }
+}
+
+@media (max-width: 640px) {
+  .era-hero {
+    grid-template-columns: 1fr;
+    grid-template-areas: "lights" "copy" "track";
+    padding: 16px 16px 0;
+  }
+  .era-track { margin: 0 -16px; height: 72px; }
+  .car-slot { width: 200px; margin-left: -100px; }
+  .start-light { width: 14px; height: 14px; }
+}
+
+/* Reduced motion: everything still shows, nothing keeps moving. framer-motion
+   animations are already skipped through <MotionConfig reducedMotion="user">. */
+@media (prefers-reduced-motion: reduce) {
+  .speed-streak,
+  .era-wipe { display: none; }
+  .backdrop-floor,
+  .track-scroll,
+  .race-car,
+  .wheel-spokes,
+  .ers-bar i,
+  .ers-mode,
+  .aero-flaps { animation: none; }
+  body { transition: none; }
 }
