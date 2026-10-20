@@ -11,8 +11,11 @@ from .data_fetch import FINISHED_STATUS
 # against the driver who was hit.
 _FIRST_LAP_LAPS = 1
 
-# After the first lap, only a retirement the driver can be blamed for counts
-# against them: a crash, or a disqualification. Any other recorded cause (a
+# After the first lap, a crash or a disqualification is the driver's doing,
+# but it doesn't count as an underperformance: nothing a driver does counts
+# the other way as an extra overperformance, so it would tip every season
+# towards underperformers. It is labelled driver_retirement and, like any
+# other retirement, left out of both shares. Any other recorded cause (a
 # mechanical failure, a puncture, illness, the team withdrawing the car) is
 # the car's or bad luck.
 _CRASH_STATUSES = {
@@ -28,7 +31,8 @@ _NO_CAUSE_STATUSES = {"", "Retired", "Not classified"}
 # Races with no race-day performance to judge, left out of the over- and
 # underperformance shares (see aggregate.build_driver_season_table).
 UNJUDGED_LABELS = {
-    "did_not_start", "first_lap_retirement", "mechanical_retirement", "unrecorded_retirement",
+    "did_not_start", "first_lap_retirement", "driver_retirement", "mechanical_retirement",
+    "unrecorded_retirement",
 }
 
 
@@ -63,8 +67,20 @@ def engineer_features(df: pd.DataFrame, rounds_without_qualifying=()) -> pd.Data
     # finishes ahead of where they started (started 10th, finished 5th ->
     # +5), negative when they lose places. Only for a car that ran to the
     # end: a retirement's classified position says nothing about its race.
+    #
+    # Both ends are ranks among the cars that ran to the end, not the raw
+    # grid slot and finishing position. Otherwise every retirement ahead
+    # hands a finisher a place they never earned, and a race with five
+    # retirements has the whole field "gaining" places: finishers averaged
+    # +1.6 places a race across 2003-2026 (+2.8 in 2003), which labelled
+    # most of the grid overperformers. Ranked this way, a race's gains and
+    # losses cancel out.
     df["start_pos"] = _start_positions(df, rounds_without_qualifying)
-    df["finish_minus_grid"] = (df["start_pos"] - df["finish_pos"]).where(df["retired"] == 0)
+    ran_to_end = (df["retired"] == 0) & df["start_pos"].notna() & df["finish_pos"].notna()
+    finishers = df[ran_to_end].groupby("round")
+    start_rank = finishers["start_pos"].rank(method="average")
+    finish_rank = finishers["finish_pos"].rank(method="average")
+    df["finish_minus_grid"] = (start_rank - finish_rank).reindex(df.index)
 
     # cumulative season stats
     df["cum_points"] = df.groupby("driver_code")["points_scored"].cumsum()
@@ -123,7 +139,7 @@ def build_target(df: pd.DataFrame) -> pd.DataFrame:
     choices = [
         "did_not_start",
         "first_lap_retirement",
-        "underperformed",
+        "driver_retirement",
         "unrecorded_retirement",
         "mechanical_retirement",
         "unknown_start",

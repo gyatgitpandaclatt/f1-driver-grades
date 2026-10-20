@@ -222,9 +222,10 @@ def compute_composite_scores(
         df["pos_score"] = 50.0
 
     df["perf_score"] = ((df["overperf_share"] - df["underperf_share"]).clip(-1, 1) * 50 + 50).round(1)
-    # avg_finish_minus_grid is start - finish over the races run to the end
-    # (see features.py), so it is positive when a driver gains places: +8 or
-    # better scores 100, -8 or worse 0. Neutral for a driver with no race
+    # avg_finish_minus_grid is start - finish over the races run to the end,
+    # both ranked among the cars that did (see features.py), so it is positive
+    # when a driver gains places: +8 or better scores 100, -8 or worse 0.
+    # Neutral for a driver with no race
     # finished from a known start (every race a retirement, or an unrecorded grid).
     df["grid_score"] = ((df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1).fillna(50.0)
     df["teammate_score"] = (df["teammate_pts_ratio"] * 100).clip(0, 100).round(1)
