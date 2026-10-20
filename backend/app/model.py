@@ -20,14 +20,21 @@ def run_model(season_labeled_df: pd.DataFrame):
     if the model was skipped.
     """
     df = season_labeled_df.copy()
-    n_unique_labels = df["season_label"].nunique()
+    label_counts = df["season_label"].value_counts()
+    n_unique_labels = len(label_counts)
+    # With two labels and one of them held by a single driver, the
+    # leave-one-out fold that holds that driver out trains on one label
+    # alone, which LogisticRegression can't fit (one overperformer and
+    # everyone else expected, say).
+    one_label_fold = n_unique_labels == 2 and label_counts.min() == 1
 
-    if len(df) < 2 or n_unique_labels < 2:
+    if len(df) < 2 or n_unique_labels < 2 or one_label_fold:
         df["rf_pred_label"] = df["season_label"]
         df["lr_pred_label"] = df["season_label"]
         note = (
             "Not enough class diversity yet to cross-validate a model "
-            "(need at least 2 drivers and 2 distinct season labels) — "
+            "(need at least 2 drivers and 2 distinct season labels, each held "
+            "by 2 or more drivers when there are only two) — "
             "predicted labels shown are just a copy of the actual labels."
         )
         return df, None, note, None
