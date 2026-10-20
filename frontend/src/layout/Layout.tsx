@@ -1,10 +1,14 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { useEffect } from "react";
 import { useLocation, useOutlet, useSearchParams } from "react-router";
+import EraHero from "../components/EraHero";
 import Header from "../components/Header";
 import Nav from "../components/Nav";
+import RaceBackdrop from "../components/RaceBackdrop";
 import StatusBanner from "../components/StatusBanner";
 import { useDriverGrades } from "../hooks/useDriverGrades";
 import { useSeasons } from "../hooks/useSeasons";
+import { eraFor } from "../theme/eras";
 import type { LayoutContext } from "./useLayoutData";
 
 // "?season=2024" -> 2024. Absent or malformed means the current season.
@@ -52,8 +56,16 @@ export default function Layout() {
   // which left the content stuck invisible after a tab change.
   const outlet = useOutlet(context ?? undefined);
 
+  // The era's colours and fonts are keyed off <html data-era> in index.css.
+  const era = eraFor(selectedSeason);
+  useEffect(() => {
+    document.documentElement.dataset.era = era.id;
+  }, [era.id]);
+
   return (
-    <>
+    // "user": movement is skipped for visitors who ask for reduced motion.
+    <MotionConfig reducedMotion="user">
+      <RaceBackdrop era={era.id} />
       <Header
         season={selectedSeason}
         isPastSeason={isPastSeason}
@@ -63,6 +75,10 @@ export default function Layout() {
         refreshing={refreshing}
         refreshError={refreshError}
       />
+      {/* Keyed on the URL's pick, which is known at once: selectedSeason goes
+          from null to the current year when the list loads, which would
+          restart the lights mid-sequence. */}
+      <EraHero key={seasonParam ?? "current"} era={era} season={selectedSeason} />
       <Nav
         isPastSeason={isPastSeason}
         seasons={seasons}
@@ -96,6 +112,6 @@ export default function Layout() {
           </motion.div>
         </AnimatePresence>
       )}
-    </>
+    </MotionConfig>
   );
 }
