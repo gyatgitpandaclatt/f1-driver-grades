@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Michroma&family=Titillium+Web:ital,wght@0,700;0,900;1,900&family=Chakra+Petch:wght@600;700&family=Saira:ital,wght@0,600;1,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Michroma&family=Titillium+Web:ital,wght@0,700;0,900;1,900&family=Chakra+Petch:wght@600;700&family=Saira:ital,wght@0,600;1,800&family=Yellowtail&display=swap');
 
 :root {
   --background: #0a0a0c;
@@ -14,11 +14,16 @@
   --incorrect: #ffd400;
   --glow: rgba(225, 6, 0, 0.25);
   --font-display: 'Titillium Web', 'Inter', sans-serif;
-  --car-body: #e10600;
-  --car-trim: #f0f0f5;
+  --car-body: #c5cad0;
+  --car-trim: #00d2be;
+  --car-carbon: #16181b;
   --car-helmet: #ffd400;
   --car-tyre: #0d0d10;
-  --car-rim: #3a3a48;
+  --car-rim: #2a2d31;
+  --car-band: #ff2d2d;
+  --car-halo: #c5cad0;
+  --trophy: #d6dbe2;
+  --slot: rgba(255, 255, 255, 0.6);
   --kerb-a: #e10600;
   --kerb-b: #f0f0f5;
   --streak: rgba(225, 6, 0, 0.5);
@@ -732,10 +737,13 @@ td.wrap {
   --accent-dim: rgba(77, 141, 255, 0.14);
   --glow: rgba(77, 141, 255, 0.3);
   --font-display: 'Michroma', 'Inter', sans-serif;
-  --car-body: #c9d1dc;
-  --car-trim: #e10600;
-  --car-helmet: #f0f0f5;
-  --car-rim: #8a93a3;
+  --car-body: #d40000;
+  --car-trim: #f2f2f2;
+  --car-carbon: #141414;
+  --car-helmet: #f2f2f2;
+  --car-rim: #b9bec6;
+  --trophy: #e3e7ee;
+  --slot: #c9d1dc;
   --kerb-a: #e10600;
   --kerb-b: #e8ecf2;
   --streak: rgba(200, 215, 240, 0.45);
@@ -753,10 +761,15 @@ td.wrap {
   --accent-dim: rgba(192, 107, 255, 0.14);
   --glow: rgba(192, 107, 255, 0.35);
   --font-display: 'Chakra Petch', 'Inter', sans-serif;
-  --car-body: #3a2f6e;
-  --car-trim: #c06bff;
-  --car-helmet: #3de8ff;
-  --car-rim: #3de8ff;
+  --car-body: #ff8000;
+  --car-trim: #ff8000;
+  --car-carbon: #1b1b20;
+  --car-helmet: #d4ff00;
+  --car-rim: #2b2b30;
+  --car-band: #ffd400;
+  --car-halo: #3a3a42;
+  --trophy: #f5c542;
+  --slot: #c06bff;
   --kerb-a: #c06bff;
   --kerb-b: #3de8ff;
   --streak: rgba(61, 232, 255, 0.45);
@@ -776,8 +789,13 @@ td.wrap {
   --font-display: 'Saira', 'Inter', sans-serif;
   --car-body: #e8edf0;
   --car-trim: #ffc400;
+  --car-carbon: #14181c;
   --car-helmet: #00e0ff;
-  --car-rim: #00e0ff;
+  --car-rim: #1c2328;
+  --car-band: #00e0ff;
+  --car-halo: #e8edf0;
+  --trophy: #e6b981;
+  --slot: #ffc400;
   --kerb-a: #ffc400;
   --kerb-b: #00e0ff;
   --streak: rgba(0, 224, 255, 0.5);
@@ -1005,7 +1023,7 @@ td.wrap {
 .era-track {
   grid-area: track;
   position: relative;
-  height: 92px;
+  height: 104px;
   margin: 0 -22px;
   overflow: hidden;
   background: linear-gradient(180deg, transparent 0 8px, rgba(0,0,0,0.35) 8px);
@@ -1032,8 +1050,8 @@ td.wrap {
   position: absolute;
   left: 50%;
   bottom: 4px;
-  width: 300px;
-  margin-left: -150px;
+  width: 380px;
+  margin-left: -190px;
 }
 
 /* A motion-blur trail off the back of the car. */
@@ -1061,6 +1079,23 @@ td.wrap {
 [data-era="hybrid"] .race-car {
   filter: drop-shadow(0 0 6px var(--glow));
 }
+
+/* The car's paint. Carbon and tyres get a faint edge so they don't vanish
+   into the dark tarmac. */
+.race-car .cb { fill: var(--car-body); }
+.race-car .ct { fill: var(--car-trim); }
+.race-car .ch { fill: var(--car-helmet); }
+.race-car .visor { fill: #101114; }
+.race-car .cf { fill: var(--car-carbon); stroke: rgba(255, 255, 255, 0.18); stroke-width: 0.8; }
+.race-car .cf-line { fill: none; stroke: var(--car-carbon); stroke-width: 2; }
+.race-car .halo { fill: none; stroke: var(--car-halo); stroke-width: 3.5; stroke-linecap: round; }
+.race-car .tyre { fill: var(--car-tyre); stroke: rgba(255, 255, 255, 0.14); stroke-width: 0.8; }
+.race-car .tyre-band { fill: none; stroke: var(--car-band); stroke-width: 1.6; }
+.race-car .rim { fill: var(--car-rim); }
+.race-car .wheel-cover { fill: var(--car-rim); stroke: var(--car-band); stroke-width: 1.2; }
+.race-car .spoke { stroke: var(--car-tyre); stroke-width: 1.6; }
+.race-car .cover-mark { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1.6; stroke-linecap: round; }
+.race-car .hub { fill: var(--car-tyre); }
 
 @keyframes car-idle {
   to { transform: translateY(-0.6px); }
@@ -1137,16 +1172,17 @@ td.wrap {
   1%, 29% { color: #0a0a0c; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px var(--glow); }
 }
 
-/* Active aero: the wing flaps open on the straight and close for the corner. */
-.aero-flaps {
+/* Wing flaps pivoting on their leading edge: DRS opening on the straight
+   (2011-2025), or 2026's front and rear flaps going to Straight Mode. */
+.wing-flap {
   transform-box: fill-box;
-  transform-origin: left center;
-  animation: aero-flap 3s ease-in-out infinite;
+  transform-origin: right center;
+  animation: wing-flap 3s ease-in-out infinite;
 }
 
-@keyframes aero-flap {
+@keyframes wing-flap {
   0%, 45%, 100% { transform: rotate(0deg); }
-  55%, 90% { transform: rotate(-14deg); }
+  55%, 90% { transform: rotate(-12deg); }
 }
 
 @media (max-width: 640px) {
@@ -1155,9 +1191,570 @@ td.wrap {
     grid-template-areas: "lights" "copy" "track";
     padding: 16px 16px 0;
   }
-  .era-track { margin: 0 -16px; height: 72px; }
-  .car-slot { width: 200px; margin-left: -100px; }
+  .era-track { margin: 0 -16px; height: 76px; }
+  .car-slot { width: 240px; margin-left: -120px; }
   .start-light { width: 14px; height: 14px; }
+}
+
+/* ══ TABLES, era by era ══
+   Headers take the era's broadcast look; rows read like a timing tower: the
+   team's colour down the left, the position in a grid slot, the surname set
+   big. Grade colours stay as they are in every era. */
+th {
+  font-family: var(--font-display);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+/* 2000s: a chrome bar with the old F1 logo's speed stripes, like the
+   mirrored helmet and the 2005 podium board. */
+[data-era="refuelling"] th {
+  color: #10141c;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.28) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #eef1f6 0%, #b3bccb 55%, #7d879a 100%);
+  box-shadow: none;
+}
+
+[data-era="refuelling"] th:hover {
+  color: #000;
+  background: linear-gradient(180deg, #ffffff 0%, #c7cfdb 55%, #8c96a8 100%);
+}
+
+/* The perforated metal wall of a 2000s car launch. */
+[data-era="refuelling"] .panel {
+  background:
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1.4px) 0 0 / 8px 8px,
+    var(--surface);
+}
+
+[data-era="ground-effect"] th {
+  background: linear-gradient(180deg, #1d1630, var(--surface-2));
+  box-shadow: inset 0 -1px 0 var(--accent), 0 6px 12px -8px var(--glow);
+}
+
+[data-era="hybrid"] th {
+  color: var(--accent);
+}
+
+.grades-table tbody td:first-child {
+  box-shadow: inset 4px 0 0 var(--team, transparent);
+  padding-left: 16px;
+}
+
+/* A grid box: lines on three sides, open at the back. */
+.pos-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 24px;
+  padding: 0 4px;
+  border: 2px solid var(--slot);
+  border-bottom-color: transparent;
+  border-radius: 2px 2px 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The champion's position on a pit board, "P1" in yellow on black. */
+.pos-slot.pit-board {
+  background: #0b0b0b;
+  border-color: #4a4a4a;
+  border-radius: 3px;
+  color: #ffd400;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.pos-slot.pit-board::before {
+  content: 'P';
+}
+
+.driver-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.driver-first {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.driver-surname {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.team-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--team);
+  transform: skewX(-12deg);
+}
+
+.composite-cell {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.grade-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grades-table tbody tr.row-s {
+  background: linear-gradient(90deg, var(--accent-dim), transparent 70%);
+}
+
+/* ── TROPHY ── */
+.trophy {
+  position: relative;
+  display: inline-flex;
+  color: var(--trophy);
+  filter: drop-shadow(0 0 6px rgba(255, 220, 140, 0.25));
+}
+
+.trophy .bubble {
+  display: none;
+}
+
+/* Champagne fizzing out of the cup, 2008 Shanghai style. */
+[data-era="refuelling"] .trophy .bubble {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: #f7e7a6;
+  animation: bubble-rise 1.6s ease-out infinite;
+}
+
+[data-era="refuelling"] .trophy .bubble:nth-of-type(2) { animation-delay: 0.5s; margin-left: 2px; }
+[data-era="refuelling"] .trophy .bubble:nth-of-type(3) { animation-delay: 1s; margin-left: -6px; }
+
+@keyframes bubble-rise {
+  from { transform: translateY(0) scale(1); opacity: 0.9; }
+  to { transform: translateY(-16px) scale(0.4); opacity: 0; }
+}
+
+/* ══ TOP-GRADE CARD ══
+   The season's best, set like a team's driver banner: script first name,
+   outlined surname. Each era dresses it the way its photos did. */
+.top-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 150px;
+  padding: 22px 26px 22px 30px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.top-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--team);
+}
+
+.top-backdrop,
+.top-effects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.top-backdrop { z-index: -1; }
+
+.top-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.top-kicker {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.top-first {
+  font-family: 'Yellowtail', cursive;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  line-height: 1;
+  margin-top: 8px;
+  transform: rotate(-4deg);
+  transform-origin: left bottom;
+}
+
+.top-surname {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2rem, 7vw, 4.2rem);
+  line-height: 0.95;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--text);
+  overflow-wrap: anywhere;
+}
+
+.top-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.top-board {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 120px;
+  padding: 12px 18px;
+  font-family: var(--font-display);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.board-line {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-grade {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* 2000s: the Shanghai podium board, red and white blocks with the old
+   logo's speed stripes, a chrome surname and a chrome plate. */
+.top-refuelling .top-backdrop {
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0 3px, transparent 3px 10px) left / 45% 100% no-repeat,
+    linear-gradient(90deg, rgba(181, 18, 27, 0.35) 50%, rgba(233, 233, 233, 0.1) 50%) right top / 36% 50% no-repeat,
+    linear-gradient(90deg, rgba(233, 233, 233, 0.1) 50%, rgba(181, 18, 27, 0.35) 50%) right bottom / 36% 50% no-repeat;
+}
+
+.top-refuelling .top-surname {
+  -webkit-text-stroke: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #b8c4d8 55%, #6f7d96 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.top-refuelling .top-board {
+  color: #10141c;
+  border: 0;
+  background: linear-gradient(180deg, #f2f5f9 0%, #b3bccb 55%, #7d879a 100%);
+}
+
+/* DRS era: a pit board on a Monaco-brick backdrop, white italic surname. */
+.top-drs .top-backdrop {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 26px 13px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 26px 26px,
+    radial-gradient(ellipse 50% 80% at 85% 50%, rgba(255, 255, 255, 0.06), transparent 70%),
+    rgba(120, 40, 30, 0.12);
+}
+
+.top-drs .top-surname {
+  color: var(--text);
+  -webkit-text-stroke: 0;
+  font-style: italic;
+}
+
+.top-drs .top-board {
+  color: #ffd400;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #0a0a0a;
+  border: 3px solid #4a4a4a;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #111, 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.top-drs .board-grade {
+  color: #f2f2f2;
+}
+
+/* Ground-effect era: the 2025 world champion board, gold laurels on a
+   night sky with fireworks. */
+.top-ground-effect .top-backdrop {
+  background:
+    radial-gradient(ellipse 40% 70% at 85% 40%, rgba(245, 197, 66, 0.14), transparent 70%),
+    linear-gradient(180deg, #0a0814, var(--surface));
+}
+
+.top-ground-effect .top-board {
+  border: 0;
+  background: transparent;
+  min-width: 150px;
+  padding: 18px 26px;
+}
+
+.top-ground-effect .board-grade {
+  background: linear-gradient(180deg, #fff3c4, #f5c542 50%, #b5841f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.top-ground-effect .board-line {
+  color: #f5c542;
+}
+
+.laurel {
+  position: absolute;
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  fill: #f5c542;
+  opacity: 0.85;
+}
+
+/* Hybrid era: the LED wall behind a 2026 winner, scan lines and a glow in
+   the team's colour, and the red carpet at the foot of it. */
+.top-hybrid .top-backdrop {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 196, 0, 0.07) 0 2px, transparent 2px 6px),
+    radial-gradient(ellipse 50% 90% at 20% 50%, color-mix(in srgb, var(--team) 22%, transparent), transparent 70%);
+}
+
+.top-hybrid::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 8px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 10px, transparent 10px 26px) center / 100% 2px no-repeat,
+    #a4121b;
+}
+
+.top-hybrid .board-grade {
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--glow);
+}
+
+/* ── EFFECTS ── */
+.flash {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 18px 8px rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  animation: flash 3.3s linear infinite;
+}
+
+@keyframes flash {
+  0%, 6%, 100% { opacity: 0; }
+  2% { opacity: 1; }
+}
+
+.droplet {
+  position: absolute;
+  left: 58%;
+  top: 60%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #f6e7a8;
+  box-shadow: 0 0 4px rgba(246, 231, 168, 0.7);
+  animation: spray 1.4s ease-out infinite;
+}
+
+@keyframes spray {
+  from { transform: translate(0, 0); opacity: 1; }
+  to { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+.firework {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(var(--fw, #ffd76a) 0 4deg, transparent 4deg 22deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 30%, #000 32%, #000 60%, transparent 64%);
+  mask-image: radial-gradient(circle, transparent 30%, #000 32%, #000 60%, transparent 64%);
+  opacity: 0;
+  animation: firework 2.4s ease-out infinite;
+}
+
+.fw-0 { right: 30px; top: 6px; }
+.fw-1 { right: 200px; top: 45%; --fw: #ff8a3d; animation-delay: 0.8s; }
+.fw-2 { left: 48%; top: -10px; --fw: #ff5ad1; animation-delay: 1.6s; }
+
+@keyframes firework {
+  0% { transform: scale(0.2); opacity: 0; }
+  10% { opacity: 1; }
+  70% { opacity: 0.7; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+
+/* Off the car: sparks from the plank (DRS era) and tyre smoke (ground-effect
+   era); the trail behind the DRS car is rain spray, as at Austin. */
+.car-sparks,
+.car-smoke {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+}
+
+[data-era="drs"] .car-sparks {
+  display: block;
+  left: 46%;
+  bottom: 6%;
+}
+
+.car-sparks i {
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #ffb547, #fff);
+  animation: spark 0.7s linear infinite;
+}
+
+@keyframes spark {
+  from { transform: translate(0, 0); opacity: 1; }
+  to { transform: translate(var(--sx), var(--sy)); opacity: 0; }
+}
+
+[data-era="drs"] .car-slot::before {
+  height: 60%;
+  top: 26%;
+  width: 240px;
+  background: linear-gradient(90deg, transparent, rgba(225, 230, 240, 0.4));
+  filter: blur(10px);
+}
+
+[data-era="ground-effect"] .car-smoke {
+  display: block;
+  left: 8%;
+  bottom: 0;
+}
+
+.car-smoke i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(rgba(235, 235, 240, 0.55), transparent 70%);
+  filter: blur(4px);
+  animation: smoke 1.6s ease-out infinite;
+}
+
+@keyframes smoke {
+  from { transform: translate(0, 0) scale(0.4); opacity: 0.8; }
+  to { transform: translate(-150px, -24px) scale(2.2); opacity: 0; }
+}
+
+/* 2000s: a grandstand smeared by a panning shot across the top. */
+.backdrop-crowd {
+  display: none;
+}
+
+[data-era="refuelling"] .backdrop-crowd {
+  display: block;
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 42vh;
+  background:
+    radial-gradient(ellipse 14px 4px, rgba(220, 40, 40, 0.9), transparent) 0 0 / 34px 14px,
+    radial-gradient(ellipse 12px 4px, rgba(240, 210, 70, 0.8), transparent) 9px 5px / 46px 17px,
+    radial-gradient(ellipse 16px 4px, rgba(70, 110, 220, 0.9), transparent) 17px 2px / 28px 11px,
+    radial-gradient(ellipse 12px 3px, rgba(240, 240, 240, 0.8), transparent) 4px 8px / 52px 13px;
+  filter: blur(3px);
+  opacity: 0.16;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+  animation: crowd-pan 14s linear infinite;
+}
+
+@keyframes crowd-pan {
+  to { background-position: -680px 0, -682px 5px, -672px 2px, -676px 8px; }
+}
+
+/* Bollards along the kerb, blue and white as at Magny-Cours. */
+[data-era="refuelling"] .track-scroll {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 92px, #2a56c6 92px 96px) 0 14px / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 92px, #eef1f5 92px 96px) 0 10px / 100% 12px no-repeat,
+    repeating-linear-gradient(90deg, var(--kerb-a) 0 24px, var(--kerb-b) 24px 48px) top / 100% 8px no-repeat,
+    repeating-linear-gradient(90deg, var(--kerb-a) 0 24px, var(--kerb-b) 24px 48px) bottom / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.22) 0 40px, transparent 40px 96px) 0 58% / 100% 2px no-repeat;
+}
+
+/* ── LOADING: the car under its cover ── */
+.covered-car {
+  display: block;
+  width: 200px;
+  max-width: 70%;
+  margin: 0 auto 14px;
+  animation: covered 1.6s ease-in-out infinite alternate;
+}
+
+.covered-car .cover {
+  fill: #15161a;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
+}
+
+.covered-car .cover-fold {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1.2;
+}
+
+.covered-car .cover-tyre {
+  fill: #0b0b0d;
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+@keyframes covered {
+  to { opacity: 0.55; }
+}
+
+@media (max-width: 640px) {
+  .top-card {
+    grid-template-columns: 1fr;
+    padding: 18px 18px 22px 24px;
+  }
+  .top-board { justify-self: start; }
 }
 
 /* Reduced motion: everything still shows, nothing keeps moving. framer-motion
@@ -1171,6 +1768,14 @@ td.wrap {
   .wheel-spokes,
   .ers-bar i,
   .ers-mode,
-  .aero-flaps { animation: none; }
+  .wing-flap,
+  .backdrop-crowd,
+  .covered-car { animation: none; }
+  .flash,
+  .droplet,
+  .firework,
+  .car-sparks,
+  .car-smoke,
+  .trophy .bubble { display: none !important; }
   body { transition: none; }
 }

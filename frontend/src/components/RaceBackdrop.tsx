@@ -26,6 +26,8 @@ export default function RaceBackdrop({ era }: { era: Era["id"] }) {
     <>
       <div className="race-backdrop" aria-hidden="true">
         <div className="backdrop-texture" />
+        {/* A grandstand blurred by a panning shot (refuelling era only). */}
+        <div className="backdrop-crowd" />
         <div className="backdrop-floor" />
         {STREAKS.map((style, i) => (
           <span key={i} className="speed-streak" style={style} />
