@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
-import { type ReactNode, useMemo, useState } from "react";
+import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import type { DriverGrade } from "../api/types";
+import { teamColor } from "../theme/teams";
 import { GRADE_ORDER } from "../theme/theme";
 import GradeBadge from "./GradeBadge";
+import Trophy from "./Trophy";
 
 type SortKey = "position" | "driver_name" | "constructor" | "points" | "composite" | "grade" | "season_label";
 
@@ -29,6 +31,14 @@ const UNPLACED: Record<string, { label: string; title: string }> = {
   E: { label: "EX", title: "Excluded from the championship" },
 };
 
+// "Andrea Kimi Antonelli" -> ["Andrea Kimi", "Antonelli"], the way the TV
+// graphics set a name; a "Jr." stays with the surname.
+export function splitName(name: string): [string, string] {
+  const parts = name.split(" ");
+  const take = parts.length > 2 && /^(Jr\.?|Sr\.?)$/.test(parts[parts.length - 1]) ? 2 : 1;
+  return [parts.slice(0, -take).join(" "), parts.slice(-take).join(" ")];
+}
+
 function sortValue(driver: DriverGrade, key: SortKey): number | string {
   if (key === "grade") return GRADE_ORDER[driver.grade] ?? 0;
   return driver[key] as number | string;
@@ -36,10 +46,12 @@ function sortValue(driver: DriverGrade, key: SortKey): number | string {
 
 export default function DriverTable({
   drivers,
+  season,
   droppedScores = false,
   footer,
 }: {
   drivers: DriverGrade[];
+  season: number;
   droppedScores?: boolean;
   footer?: ReactNode;
 }) {
@@ -69,7 +81,7 @@ export default function DriverTable({
   return (
     <div className="panel">
       <h2>Driver Grades</h2>
-      <table>
+      <table className="grades-table">
         <thead>
           <tr>
             {COLUMNS.map((col) => (
@@ -89,25 +101,48 @@ export default function DriverTable({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((d) => (
+          {sorted.map((d) => {
+            const [first, surname] = splitName(d.driver_name);
+            const unplaced = UNPLACED[d.position_text];
+            return (
             <motion.tr
               key={d.driver_code}
               layout
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
+              className={d.grade === "S" ? "row-s" : undefined}
+              // The team's colour runs down the row's left edge.
+              style={{ "--team": teamColor(d.constructor, season) } as CSSProperties}
             >
-              <td title={UNPLACED[d.position_text]?.title}>
-                {UNPLACED[d.position_text]?.label ?? d.position}
+              <td title={unplaced?.title}>
+                {/* Painted like a grid slot; the champion's like a pit board. */}
+                <span className={d.position === 1 && !unplaced ? "pos-slot pit-board" : "pos-slot"}>
+                  {unplaced?.label ?? d.position}
+                </span>
               </td>
-              <td>{d.driver_name}</td>
-              <td>{d.constructor}</td>
-              <td>{Number.isInteger(d.points) ? d.points : +d.points.toFixed(2)}</td>
-              <td>{d.composite.toFixed(1)}</td>
               <td>
-                <GradeBadge grade={d.grade} />
+                <span className="driver-cell">
+                  <span className="driver-first">{first}</span>
+                  <span className="driver-surname">{surname}</span>
+                </span>
+              </td>
+              <td>
+                <span className="team-cell">
+                  <i className="team-dot" aria-hidden="true" />
+                  {d.constructor}
+                </span>
+              </td>
+              <td>{Number.isInteger(d.points) ? d.points : +d.points.toFixed(2)}</td>
+              <td className="composite-cell">{d.composite.toFixed(1)}</td>
+              <td>
+                <span className="grade-cell">
+                  <GradeBadge grade={d.grade} />
+                  {d.grade === "S" && <Trophy />}
+                </span>
               </td>
               <td>{d.season_label}</td>
             </motion.tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {footer}
