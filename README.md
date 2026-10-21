@@ -43,7 +43,7 @@ pnpm run dev
 
 App: http://localhost:5173 (proxies `/api/*` to the backend on :8000 — see `vite.config.ts`)
 
-## Running as a single process (production / Replit)
+## Running as a single process
 
 The backend can serve the built frontend directly, so the whole app is one
 process on one port — no separate frontend server needed:
@@ -54,11 +54,6 @@ cd backend && py -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Or just run `bash start.sh` from the project root, which does both steps.
-This is what Replit runs (see `.replit`) — import this repo into Replit via
-"Import from GitHub" and it should build and start automatically. If the
-Nix channel in `.replit`/`replit.nix` is stale by the time you read this,
-Replit will prompt you to fix it, or you can just delete both files and let
-Replit auto-detect Python + Node.js instead.
 
 ## Deploying to Google Cloud Run
 
@@ -110,8 +105,7 @@ way, just not pre-warmed.
 
 No frontend code changes are needed for this move: the frontend only ever
 calls relative paths like `/api/driver-grades` (see `frontend/src/api/client.ts`),
-so it works unmodified on whatever host/domain serves it, same as it does
-on Replit.
+so it works unmodified on whatever host/domain serves it.
 
 To test the exact production image locally before deploying, with Docker
 installed:

@@ -14,5 +14,3 @@ frontend/*.tsbuildinfo
 frontend/*.log
 
 *.md
-.replit
-replit.nix

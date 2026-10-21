@@ -227,7 +227,7 @@ async def refresh_season_summary(season: int | None = None):
 
 # Serve the built frontend (frontend/dist, produced by `npm run build`) so
 # the whole app runs as a single process on a single port — no separate
-# frontend server needed in production (e.g. on Replit). Registered last so
+# frontend server needed in production (e.g. the Docker image). Registered last so
 # it never shadows the /api/* routes above. Absent in local dev unless you
 # run the frontend build; the Vite dev server + proxy is used instead.
 if FRONTEND_DIST.is_dir():
