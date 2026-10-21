@@ -7,6 +7,7 @@ export const COLORS = {
   text: "#f0f0f5",
   textSecondary: "#7878a0",
   border: "#22222e",
+  borderBright: "#33334a",
   accent: "#e10600",
   categorical: ["#4db8ff", "#00d68f", "#ffb347", "#ff6b6b", "#c084fc"],
   correct: "#00d68f",
