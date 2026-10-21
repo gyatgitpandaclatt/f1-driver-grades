@@ -445,7 +445,7 @@ tbody tr:nth-child(even):hover {
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 0.02em;
-  color: #0a0a0c;
+  color: var(--background);
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }

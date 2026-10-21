@@ -59,7 +59,7 @@ export default function FeatureImportanceChart({
       <h2>RF Feature Importances</h2>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#38383e" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={COLORS.borderBright} horizontal={false} />
           <XAxis type="number" tick={{ fill: COLORS.textSecondary, fontSize: 12 }} />
           <YAxis
             type="category"
@@ -69,7 +69,7 @@ export default function FeatureImportanceChart({
           />
           <Tooltip
             formatter={(value: number) => value.toFixed(3)}
-            contentStyle={{ background: COLORS.surface, border: "1px solid #38383e" }}
+            contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.borderBright}` }}
             labelStyle={{ color: COLORS.text }}
           />
           <Bar dataKey="importance" radius={[0, 4, 4, 0]}>

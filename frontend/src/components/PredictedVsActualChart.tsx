@@ -53,7 +53,7 @@ export default function PredictedVsActualChart({ data }: { data: PredictedVsActu
                   x2={width - RIGHT_PADDING}
                   y1={y}
                   y2={y}
-                  stroke="#38383e"
+                  stroke={COLORS.borderBright}
                   strokeDasharray="3 3"
                 />
                 <text x={8} y={y + 4} fill={COLORS.text} fontSize={11}>
@@ -77,7 +77,7 @@ export default function PredictedVsActualChart({ data }: { data: PredictedVsActu
                 onMouseLeave={() => setHovered(null)}
                 style={{ cursor: "pointer" }}
               >
-                <line x1={x} x2={x} y1={actualY} y2={predictedY} stroke="#555" strokeWidth={1.2} />
+                <line x1={x} x2={x} y1={actualY} y2={predictedY} stroke={COLORS.textSecondary} strokeWidth={1.2} />
                 <circle cx={x} cy={actualY} r={5} fill={COLORS.textSecondary} />
                 <polygon
                   points={`${x},${predictedY - diamondSize} ${x + diamondSize},${predictedY} ${x},${predictedY + diamondSize} ${x - diamondSize},${predictedY}`}
