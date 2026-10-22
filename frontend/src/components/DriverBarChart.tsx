@@ -30,7 +30,7 @@ export default function DriverBarChart({ data, neutral = 50, domain = [0, 100] }
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sorted} layout="vertical" margin={{ left: 10, right: 30 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#38383e" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.borderBright} horizontal={false} />
         <XAxis
           type="number"
           domain={domain}
@@ -46,7 +46,7 @@ export default function DriverBarChart({ data, neutral = 50, domain = [0, 100] }
         <Tooltip
           formatter={(value: number) => value.toFixed(1)}
           labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
-          contentStyle={{ background: COLORS.surface, border: "1px solid #38383e" }}
+          contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.borderBright}` }}
           labelStyle={{ color: COLORS.text }}
           itemStyle={{ color: COLORS.text }}
         />

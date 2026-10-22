@@ -222,10 +222,11 @@ def compute_composite_scores(
         df["pos_score"] = 50.0
 
     df["perf_score"] = ((df["overperf_share"] - df["underperf_share"]).clip(-1, 1) * 50 + 50).round(1)
-    # avg_finish_minus_grid is qual_pos - finish_pos (see features.py), so it is
-    # positive when a driver gains places: +8 or better scores 100, -8 or worse 0.
-    # Neutral for a driver with no race finished from a known grid slot (every
-    # race a retirement, or an unrecorded grid).
+    # avg_finish_minus_grid is start - finish over the races run to the end,
+    # both ranked among the cars that did (see features.py), so it is positive
+    # when a driver gains places: +8 or better scores 100, -8 or worse 0.
+    # Neutral for a driver with no race
+    # finished from a known start (every race a retirement, or an unrecorded grid).
     df["grid_score"] = ((df["avg_finish_minus_grid"].clip(-8, 8) / 8) * 50 + 50).round(1).fillna(50.0)
     df["teammate_score"] = (df["teammate_pts_ratio"] * 100).clip(0, 100).round(1)
 
@@ -258,9 +259,10 @@ def compute_composite_scores(
     label_bonus = {"overperformer": 4, "expected": 0, "underperformer": -4}
     df["label_bonus"] = df["season_label"].map(label_bonus).fillna(0)
 
-    df["model_bonus"] = df.apply(
-        lambda r: 0.5 if r["season_label"] == r["rf_pred_label"] else -0.5, axis=1
-    )
+    # A reward for agreement, never a penalty: a model that rates a driver
+    # higher than their label does would otherwise cost them points, so a
+    # worse race could raise a score by bringing the two back into line.
+    df["model_bonus"] = (df["season_label"] == df["rf_pred_label"]).astype(float) * 0.5
 
     df["rookie_bonus"] = df["is_rookie"] * 2
 

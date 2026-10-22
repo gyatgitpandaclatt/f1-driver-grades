@@ -3,6 +3,15 @@ import math
 import pandas as pd
 
 from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE, is_indianapolis_500
+from .features import UNJUDGED_LABELS
+
+
+def _share(labels: pd.Series, label: str) -> float:
+    """The share of a driver's judged races with this label: a race they
+    never started, or any retirement, is in neither column (see
+    features.UNJUDGED_LABELS)."""
+    judged = labels[~labels.isin(UNJUDGED_LABELS)]
+    return float((judged == label).mean()) if len(judged) else 0.0
 
 
 def build_driver_season_table(model_df: pd.DataFrame, rookies: set[str]) -> pd.DataFrame:
@@ -11,8 +20,8 @@ def build_driver_season_table(model_df: pd.DataFrame, rookies: set[str]) -> pd.D
         .agg(
             races=("round", "nunique"),
             avg_finish_minus_grid=("finish_minus_grid", "mean"),
-            overperf_share=("performance_label", lambda s: (s == "overperformed").mean()),
-            underperf_share=("performance_label", lambda s: (s == "underperformed").mean()),
+            overperf_share=("performance_label", lambda s: _share(s, "overperformed")),
+            underperf_share=("performance_label", lambda s: _share(s, "underperformed")),
         )
         .reset_index()
     )

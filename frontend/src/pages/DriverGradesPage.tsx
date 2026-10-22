@@ -1,4 +1,5 @@
 import DriverTable from "../components/DriverTable";
+import TopDriverCard from "../components/TopDriverCard";
 import FeatureImportanceChart from "../components/FeatureImportanceChart";
 import PredictedVsActualChart from "../components/PredictedVsActualChart";
 import MisclassifiedCallout from "../components/MisclassifiedCallout";
@@ -11,8 +12,10 @@ export default function DriverGradesPage() {
 
   return (
     <>
+      <TopDriverCard drivers={drivers} season={season} />
       <DriverTable
         drivers={drivers}
+        season={season}
         droppedScores={meta.dropped_scores}
         footer={
           left > 0 && meta.min_races_for_grade != null ? (

@@ -43,7 +43,7 @@ pnpm run dev
 
 App: http://localhost:5173 (proxies `/api/*` to the backend on :8000 — see `vite.config.ts`)
 
-## Running as a single process (production / Replit)
+## Running as a single process
 
 The backend can serve the built frontend directly, so the whole app is one
 process on one port — no separate frontend server needed:
@@ -54,11 +54,6 @@ cd backend && py -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Or just run `bash start.sh` from the project root, which does both steps.
-This is what Replit runs (see `.replit`) — import this repo into Replit via
-"Import from GitHub" and it should build and start automatically. If the
-Nix channel in `.replit`/`replit.nix` is stale by the time you read this,
-Replit will prompt you to fix it, or you can just delete both files and let
-Replit auto-detect Python + Node.js instead.
 
 ## Deploying to Google Cloud Run
 
@@ -110,8 +105,7 @@ way, just not pre-warmed.
 
 No frontend code changes are needed for this move: the frontend only ever
 calls relative paths like `/api/driver-grades` (see `frontend/src/api/client.ts`),
-so it works unmodified on whatever host/domain serves it, same as it does
-on Replit.
+so it works unmodified on whatever host/domain serves it.
 
 To test the exact production image locally before deploying, with Docker
 installed:
@@ -183,7 +177,7 @@ rewrite a narrative, rebuild that season's snapshot.
   scores), which is why nothing season-wide reads lap data: a single race's
   laps are ~12 requests.
 - The data has gaps, each worked around in the open rather than hidden.
-  Three of them apply to the seasons on offer:
+  Four of them apply to the seasons on offer:
   - **No driver codes.** Ergast only has three-letter codes for drivers from
     about 2005 on; a few 2003-2004 drivers (da Matta, Panis, Baumgartner)
     have none. They get one made from their surname, unique within the
@@ -196,6 +190,16 @@ rewrite a narrative, rebuild that season's snapshot.
     rule) and, before 2021, drivers who never took the start; they are
     dropped, since they never raced (from 2021 a non-starter stays, as they
     may have raced the sprint).
+  - **Retirement causes.** A retirement's status gives at most its cause
+    ("Engine", "Collision"), never who caused a crash, and from 2025 not
+    even the cause: every retirement is just "Retired" (most of 2023-2024
+    too). So a retirement counts against a driver only when it was a crash
+    after the first lap, or a disqualification. Anything else counts
+    neither way: a retirement on the opening lap or the lap after, whatever
+    its cause (nearly all are crashes, and the data can't say who caused
+    one); any other recorded cause (a breakdown, a puncture, illness); and
+    a retirement with no cause, where a crash and a breakdown look the
+    same, which from 2025 leaves a solo crash uncounted too.
 
   The rest only matter if `FIRST_SEASON` is lowered (the code handles every
   season back to 1950):

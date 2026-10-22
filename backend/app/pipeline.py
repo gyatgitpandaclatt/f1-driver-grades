@@ -187,7 +187,7 @@ def run_pipeline(season: int) -> dict:
 
     qual_df, grid_rounds = _grid_as_qualifying(fetch_qualifying_results(season), race_df)
     merged_df = merge_qualifying_and_race(qual_df, race_df)
-    features_df = engineer_features(merged_df)
+    features_df = engineer_features(merged_df, grid_rounds)
     model_df = build_target(features_df)
 
     entrants_df = build_driver_season_table(model_df, rookie_codes(season, race_df))
