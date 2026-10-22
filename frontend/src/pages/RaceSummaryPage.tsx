@@ -58,49 +58,53 @@ function RaceSummary() {
       <h3>Pit Stop Analysis</h3>
       <NarrativeSection text={sections.pit_analysis} />
       {pitStops.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Driver</th>
-              <th>Lap</th>
-              <th>Stop #</th>
-              <th>Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pitStops.map((stop, i) => (
-              <tr key={i}>
-                <td>{stop.driver}</td>
-                <td>{stop.lap_number}</td>
-                <td>{stop.stop_number}</td>
-                <td>{stop.duration_seconds != null ? `${stop.duration_seconds.toFixed(1)}s` : "—"}</td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Driver</th>
+                <th>Lap</th>
+                <th>Stop #</th>
+                <th>Duration</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pitStops.map((stop, i) => (
+                <tr key={i}>
+                  <td>{stop.driver}</td>
+                  <td>{stop.lap_number}</td>
+                  <td>{stop.stop_number}</td>
+                  <td>{stop.duration_seconds != null ? `${stop.duration_seconds.toFixed(1)}s` : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3>Overtakes &amp; Battles</h3>
       <NarrativeSection text={sections.overtakes_battles} />
       {context.overtakes.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Lap</th>
-              <th>Overtake</th>
-            </tr>
-          </thead>
-          <tbody>
-            {context.overtakes.map((o, i) => (
-              <tr key={i}>
-                <td>{o.lap}</td>
-                <td>
-                  {o.overtaking_driver} ahead of {o.overtaken_driver}
-                </td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Lap</th>
+                <th>Overtake</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {context.overtakes.map((o, i) => (
+                <tr key={i}>
+                  <td>{o.lap}</td>
+                  <td>
+                    {o.overtaking_driver} ahead of {o.overtaken_driver}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3>Driver of the Day</h3>
