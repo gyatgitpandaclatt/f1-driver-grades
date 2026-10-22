@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Michroma&family=Titillium+Web:ital,wght@0,700;0,900;1,900&family=Chakra+Petch:wght@600;700&family=Saira:ital,wght@0,600;1,800&family=Yellowtail&display=swap');
 
 :root {
+  color-scheme: only dark;
   --background: #0a0a0c;
   --surface: #111116;
   --surface-2: #18181f;
