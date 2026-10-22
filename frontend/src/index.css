@@ -802,10 +802,11 @@ td.wrap {
 }
 
 /* ── BACKDROP ── */
+/* A child of <body>, painted over the canvas and under #root (z-index 1). */
 .race-backdrop {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
 }

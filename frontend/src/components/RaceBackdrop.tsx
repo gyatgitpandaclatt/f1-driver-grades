@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Era } from "../theme/eras";
 
 // Streaks of a car going by, behind everything. Fixed positions and timings
@@ -22,7 +23,10 @@ export default function RaceBackdrop({ era }: { era: Era["id"] }) {
     }
   }, [era]);
 
-  return (
+  // Rendered into <body>, not inside #root: #root is the page's scroll
+  // container, and WebKit (Safari, every iOS browser) doesn't paint a fixed,
+  // negative-z-index child of a scroller, so the era backdrops went missing.
+  return createPortal(
     <>
       <div className="race-backdrop" aria-hidden="true">
         <div className="backdrop-texture" />
@@ -44,6 +48,7 @@ export default function RaceBackdrop({ era }: { era: Era["id"] }) {
           transition={{ duration: 0.9, ease: [0.7, 0, 0.3, 1] }}
         />
       )}
-    </>
+    </>,
+    document.body,
   );
 }
