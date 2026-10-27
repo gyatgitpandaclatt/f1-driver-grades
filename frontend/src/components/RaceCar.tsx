@@ -3,7 +3,9 @@ import type { Era } from "../theme/eras";
 
 // Side-on drawings of each era's car, nose to the right, ground at y=96 (one
 // unit is about 1.5 cm). Paint comes from classes styled by the era's --car-*
-// properties in index.css: .cb body, .ct trim, .cf carbon, .ch helmet.
+// properties in index.css: .cb body, .ct trim, .ca livery accent, .cf carbon,
+// .ch helmet. Each era is painted as its icon: Schumacher's Ferrari, Hamilton's
+// black W11, Verstappen's RB19.
 
 interface WheelProps {
   cx: number;
@@ -68,6 +70,7 @@ function Refuelling() {
       <Helmet cx={210} />
       <path className="cb" d="M36 72 L46 64 L92 58 L150 46 L170 32 L188 30 L192 40 L198 46 L232 47 L242 50 L264 54 L300 65 L314 72 Q318 76 312 78 L300 77 L262 70 L246 72 L240 88 L48 88 L38 80 Z" />
       <path className="cf" d="M186 31 L191 31 L194 40 L189 40 Z" />
+      <path className="ca" d="M294 63 L303 66 L303 77.5 L294 76 Z" />
       <path className="cb" d="M112 88 L116 62 Q118 58 126 58 L214 58 Q222 58 226 62 L232 72 L232 88 Z" />
       <path className="ct" d="M170 59 L216 59 L224 66 L182 66 Z" />
       <path className="cf" d="M222 60 L230 62 L232 72 L224 72 Z" />
@@ -96,6 +99,7 @@ function Drs() {
       <path className="cb" d="M168 35 L48 42 L48 48 L100 52 Z" />
       <path className="cb" d="M26 72 L40 62 L84 56 L170 34 L186 30 L190 38 L198 46 L238 47 L248 52 L284 58 L338 70 L354 75 Q358 78 352 80 L338 79 L292 73 L262 73 L256 88 L44 88 L30 80 Z" />
       <path className="ct" d="M100 56 L170 38 L176 40 L108 58 Z" />
+      <path className="ca" d="M323 67.5 L346 72.5 L346 76.5 L323 72.5 Z" />
       <path className="cf" d="M178 28 H190 V30 H178 Z M185 31 L190 31 L192 39 L187 39 Z" />
       <path className="cb" d="M120 88 L124 66 Q128 60 138 60 L232 60 Q242 60 246 66 L250 76 L250 88 Z" />
       <path className="ct" d="M150 70 H240 L236 74 H150 Z" />
@@ -128,8 +132,10 @@ function GroundEffect() {
       <path className="cf" d="M50 90 H290 V93 H50 Z M90 86 Q180 82 270 86 V90 H90 Z" />
       <Helmet cx={224} />
       <path className="cb" d="M28 70 L44 60 L92 54 L172 34 L188 30 L192 38 L200 46 L240 47 L252 52 L300 60 L336 70 L352 80 L340 81 L300 75 L266 75 L260 90 L50 90 L32 80 Z" />
+      <path className="ca" d="M330 68.5 L336 70 L352 80 L340 81 L328 79 Z" />
       <path className="cf" d="M92 54 L172 34 L180 36 L104 58 Z M184 31 L189 31 L192 38 L187 38 Z" />
       <path className="cb" d="M108 90 Q120 76 150 68 L230 58 Q244 56 250 62 L254 76 V90 Z" />
+      <path className="ct" d="M150 72 L232 62 L238 66 L156 77 Z" />
       <path className="cf" d="M112 90 Q130 82 160 80 H254 V90 Z M242 58 L250 60 L254 74 L246 74 Z" />
       <path className="cf" d="M240 50 H249 V53 H240 Z" />
       <path className="halo" d="M198 43 Q222 36 246 42 L252 52" />
