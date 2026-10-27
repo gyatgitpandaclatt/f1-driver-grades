@@ -15,14 +15,16 @@
   --incorrect: #ffd400;
   --glow: rgba(225, 6, 0, 0.25);
   --font-display: 'Titillium Web', 'Inter', sans-serif;
-  --car-body: #c5cad0;
+  --car-body: #141517;
   --car-trim: #00d2be;
-  --car-carbon: #16181b;
+  --car-accent: #c5cad0;
+  --car-edge: rgba(255, 255, 255, 0.28);
+  --car-carbon: #08090a;
   --car-helmet: #ffd400;
   --car-tyre: #0d0d10;
   --car-rim: #2a2d31;
   --car-band: #ff2d2d;
-  --car-halo: #c5cad0;
+  --car-halo: #141517;
   --trophy: #d6dbe2;
   --slot: rgba(255, 255, 255, 0.6);
   --kerb-a: #e10600;
@@ -740,8 +742,10 @@ td.wrap {
   --font-display: 'Michroma', 'Inter', sans-serif;
   --car-body: #d40000;
   --car-trim: #f2f2f2;
+  --car-accent: #f2f2f2;
+  --car-edge: transparent;
   --car-carbon: #141414;
-  --car-helmet: #f2f2f2;
+  --car-helmet: #e10600;
   --car-rim: #b9bec6;
   --trophy: #e3e7ee;
   --slot: #c9d1dc;
@@ -762,13 +766,15 @@ td.wrap {
   --accent-dim: rgba(192, 107, 255, 0.14);
   --glow: rgba(192, 107, 255, 0.35);
   --font-display: 'Chakra Petch', 'Inter', sans-serif;
-  --car-body: #ff8000;
-  --car-trim: #ff8000;
-  --car-carbon: #1b1b20;
-  --car-helmet: #d4ff00;
+  --car-body: #1b2a5c;
+  --car-trim: #e4002b;
+  --car-accent: #ffcc00;
+  --car-edge: rgba(255, 255, 255, 0.22);
+  --car-carbon: #10131c;
+  --car-helmet: #ff6a13;
   --car-rim: #2b2b30;
   --car-band: #ffd400;
-  --car-halo: #3a3a42;
+  --car-halo: #1b2a5c;
   --trophy: #f5c542;
   --slot: #c06bff;
   --kerb-a: #c06bff;
@@ -790,6 +796,8 @@ td.wrap {
   --font-display: 'Saira', 'Inter', sans-serif;
   --car-body: #e8edf0;
   --car-trim: #ffc400;
+  --car-accent: #ffc400;
+  --car-edge: transparent;
   --car-carbon: #14181c;
   --car-helmet: #00e0ff;
   --car-rim: #1c2328;
@@ -1084,7 +1092,8 @@ td.wrap {
 
 /* The car's paint. Carbon and tyres get a faint edge so they don't vanish
    into the dark tarmac. */
-.race-car .cb { fill: var(--car-body); }
+.race-car .cb { fill: var(--car-body); stroke: var(--car-edge); stroke-width: 0.8; }
+.race-car .ca { fill: var(--car-accent); }
 .race-car .ct { fill: var(--car-trim); }
 .race-car .ch { fill: var(--car-helmet); }
 .race-car .visor { fill: #101114; }
