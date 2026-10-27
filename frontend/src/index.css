@@ -387,6 +387,14 @@ a {
 }
 
 /* ── TABLE ── */
+/* A wide table scrolls sideways inside this box, so on a narrow screen every
+   column stays reachable while the page, and the rest of the panel around
+   the table, stay put. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -659,14 +667,18 @@ td.wrap {
 }
 
 /* ── STAT TILES ── */
+/* Flex rather than a fixed-width grid: a flex item never shrinks below its
+   longest word, so a tile widens to fit a label like "Underperformed"
+   instead of letting it spill out of the tile on a narrow screen. */
 .stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 14px 0 24px;
 }
 
 .stat-tile {
+  flex: 1 1 110px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 10px;
