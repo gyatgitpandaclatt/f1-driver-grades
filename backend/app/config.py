@@ -167,6 +167,14 @@ SEASON_FEATURE_COLS = [
     "is_rookie",
 ]
 
+# Season labels are relative to the season: the top SEASON_LABEL_SHARE of the
+# graded field by net over/underperformance share are overperformers, the
+# bottom as many underperformers (about the 14% / 13% the old fixed 0.3 bar
+# averaged over 2003-2025). At least MIN_DRIVERS_PER_SEASON_LABEL each, so
+# leave-one-out always has the class left to train on.
+SEASON_LABEL_SHARE = 0.15
+MIN_DRIVERS_PER_SEASON_LABEL = 2
+
 API_BASE_URL = "https://api.jolpi.ca/ergast/f1"
 CACHE_TTL_SECONDS = 20 * 60
 REQUEST_TIMEOUT = 10
