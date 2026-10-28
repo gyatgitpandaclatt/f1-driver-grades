@@ -235,7 +235,9 @@ if FRONTEND_DIST.is_dir():
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        candidate = FRONTEND_DIST / full_path
-        if full_path and candidate.is_file():
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        # The path arrives URL-decoded, so "..%2f" walks out of dist: serve
+        # only files that resolve inside it (backend/.env holds the API keys).
+        if full_path and candidate.is_relative_to(FRONTEND_DIST.resolve()) and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(FRONTEND_DIST / "index.html")
