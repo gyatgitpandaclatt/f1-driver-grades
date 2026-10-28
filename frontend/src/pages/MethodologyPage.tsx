@@ -258,20 +258,22 @@ export default function MethodologyPage() {
         )}
       </ul>
 
-      <p><strong>Seasonal aggregation (30% threshold filter).</strong> The per-driver seasonal label is assigned as follows:</p>
+      <p><strong>Seasonal aggregation (relative to the season).</strong> Each driver is labelled against the rest of that season&rsquo;s graded field:</p>
       <ul>
-        <li>Overperformance frequency &gt; underperformance frequency <strong>and</strong> overperformance frequency &gt; 30% of the races judged → <strong>overperformer</strong></li>
-        <li>Underperformance frequency &gt; overperformance frequency <strong>and</strong> underperformance frequency &gt; 30% of the races judged → <strong>underperformer</strong></li>
-        <li>Otherwise → <strong>expected</strong></li>
+        <li>Drivers are ranked by overperformance frequency minus underperformance frequency (ties broken by average places gained)</li>
+        <li>The top 15% of the field (at least 2 drivers), among those with more overperformances than underperformances → <strong>overperformer</strong></li>
+        <li>The bottom 15% of the field (at least 2 drivers), among those with more underperformances than overperformances → <strong>underperformer</strong></li>
+        <li>Everyone else → <strong>expected</strong></li>
       </ul>
       <p>
         The frequencies are of the races judged: retirements{season >= 2021 ? " and races not started" : ""} are
         left out.
       </p>
       <p>
-        The 30% threshold filters noise and requires a meaningful pattern before applying a
-        label, which prevents volatile drivers with only one or two unusual races from being
-        mislabeled.
+        Some seasons are far calmer than others: in a season where few drivers gain or lose
+        three places, a fixed bar would label almost the whole grid &ldquo;expected&rdquo;. Ranking
+        within the season judges each driver against the field they actually raced, and leaves
+        every season with enough drivers in each label to cross-validate the model.
       </p>
 
       <p className="caption">

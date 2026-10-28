@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from sklearn.model_selection import LeaveOneOut, cross_val_predict
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from .config import SEASON_FEATURE_COLS
+from .config import MIN_DRIVERS_PER_SEASON_LABEL, SEASON_FEATURE_COLS
 
 
 def run_model(season_labeled_df: pd.DataFrame):
@@ -21,20 +21,18 @@ def run_model(season_labeled_df: pd.DataFrame):
     """
     df = season_labeled_df.copy()
     label_counts = df["season_label"].value_counts()
-    n_unique_labels = len(label_counts)
-    # With two labels and one of them held by a single driver, the
-    # leave-one-out fold that holds that driver out trains on one label
-    # alone, which LogisticRegression can't fit (one overperformer and
-    # everyone else expected, say).
-    one_label_fold = n_unique_labels == 2 and label_counts.min() == 1
-
-    if len(df) < 2 or n_unique_labels < 2 or one_label_fold:
+    # Leave-one-out needs every class held by 2+ drivers: holding out a
+    # class's only driver leaves nothing of it to train on (and with two
+    # labels, LogisticRegression can't fit one label alone). Season labels
+    # guarantee this from MIN_DRIVERS_PER_SEASON_LABEL * 3 graded drivers;
+    # a smaller field (a tiny early-season table) is skipped.
+    if len(label_counts) < 2 or label_counts.min() < MIN_DRIVERS_PER_SEASON_LABEL:
         df["rf_pred_label"] = df["season_label"]
         df["lr_pred_label"] = df["season_label"]
         note = (
             "Not enough class diversity yet to cross-validate a model "
-            "(need at least 2 drivers and 2 distinct season labels, each held "
-            "by 2 or more drivers when there are only two) — "
+            "(need at least 2 distinct season labels, each held by 2 or more "
+            "drivers) — "
             "predicted labels shown are just a copy of the actual labels."
         )
         return df, None, note, None

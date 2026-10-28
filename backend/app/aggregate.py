@@ -2,7 +2,13 @@ import math
 
 import pandas as pd
 
-from .config import MIN_RACE_SHARE_FOR_GRADE, MIN_RACES_FOR_GRADE, is_indianapolis_500
+from .config import (
+    MIN_DRIVERS_PER_SEASON_LABEL,
+    MIN_RACE_SHARE_FOR_GRADE,
+    MIN_RACES_FOR_GRADE,
+    SEASON_LABEL_SHARE,
+    is_indianapolis_500,
+)
 from .features import UNJUDGED_LABELS
 
 
@@ -65,16 +71,30 @@ def filter_gradeable_drivers(
     return eligible.reset_index(drop=True), min_races
 
 
-def _assign_season_label(row) -> str:
-    if row["overperf_share"] > row["underperf_share"] and row["overperf_share"] > 0.3:
-        return "overperformer"
-    elif row["underperf_share"] > row["overperf_share"] and row["underperf_share"] > 0.3:
-        return "underperformer"
-    else:
-        return "expected"
-
-
 def assign_season_label(driver_season_df: pd.DataFrame) -> pd.DataFrame:
-    season_labeled_df = driver_season_df.copy()
-    season_labeled_df["season_label"] = season_labeled_df.apply(_assign_season_label, axis=1)
-    return season_labeled_df
+    """Label each driver against the rest of their own season's field.
+
+    Drivers are ranked by net share (overperf_share - underperf_share), ties
+    broken by places gained, then driver code so the order is stable. The top
+    SEASON_LABEL_SHARE are overperformers, the bottom as many underperformers,
+    never fewer than MIN_DRIVERS_PER_SEASON_LABEL each, but only a driver
+    whose net share is positive can be an overperformer and only a negative
+    one an underperformer: a driver who gained more often than they lost
+    isn't an underperformer for being in a calm field. A fixed bar on the
+    shares (once > 0.3) left calm seasons, where gains and losses rarely reach
+    3 places, with nobody above it: 2015 had one overperformer and no
+    underperformers, too few to cross-validate the model.
+    """
+    df = driver_season_df.copy()
+    n = len(df)
+    per_side = min(max(MIN_DRIVERS_PER_SEASON_LABEL, round(SEASON_LABEL_SHARE * n)), n // 2)
+    net = df["overperf_share"] - df["underperf_share"]
+    ranked = (
+        df.assign(net=net, gained=df["avg_finish_minus_grid"].fillna(0))
+        .sort_values(["net", "gained", "driver_code"], ascending=[False, False, True])
+    )
+    df["season_label"] = "expected"
+    if per_side:
+        df.loc[ranked.index[ranked["net"] > 0][:per_side], "season_label"] = "overperformer"
+        df.loc[ranked.index[ranked["net"] < 0][::-1][:per_side], "season_label"] = "underperformer"
+    return df
